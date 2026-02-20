@@ -11,6 +11,19 @@ mkdir -p "$SESSION_LOG_DIR" 2>/dev/null
 RECENT_COMMITS=$(git log --oneline --since="1 hour ago" 2>/dev/null)
 MODIFIED_FILES=$(git diff --name-only 2>/dev/null)
 
+# --- Clean up active session state on normal shutdown ---
+STATE_FILE="production/session-state/active.md"
+if [ -f "$STATE_FILE" ]; then
+    # Archive to session log before removing
+    {
+        echo "## Archived Session State: $TIMESTAMP"
+        cat "$STATE_FILE"
+        echo "---"
+        echo ""
+    } >> "$SESSION_LOG_DIR/session-log.md" 2>/dev/null
+    rm "$STATE_FILE" 2>/dev/null
+fi
+
 if [ -n "$RECENT_COMMITS" ] || [ -n "$MODIFIED_FILES" ]; then
     {
         echo "## Session End: $TIMESTAMP"

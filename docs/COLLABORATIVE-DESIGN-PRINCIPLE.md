@@ -352,6 +352,39 @@ Every file write must follow:
           [Returns to step 1]
 ```
 
+### Incremental Section Writing (Design Documents)
+
+For multi-section documents (design docs, lore entries, architecture docs), write
+each section to the file as it's approved instead of building the full document
+in conversation. This prevents context overflow during long iterative sessions.
+
+```
+1. Agent creates file with skeleton (all section headers, empty bodies)
+   Agent: "May I create design/gdd/crafting-system.md with the section skeleton?"
+   User: "Yes"
+
+2. For EACH section:
+   Agent: [Drafts section in conversation]
+   User: [Reviews, requests changes]
+   Agent: [Revises until approved]
+   Agent: "May I write this section to the file?"
+   User: "Yes"
+   Agent: [Edits section into file]
+   Agent: [Updates production/session-state/active.md with progress]
+   ─── Context for this section can now be safely compacted ───
+   ─── The decisions are IN THE FILE ───
+
+3. If session crashes or compacts mid-document:
+   Agent: [Reads the file — completed sections are all there]
+   Agent: [Reads production/session-state/active.md — knows what's next]
+   Agent: "Sections 1-4 are complete. Ready to work on section 5?"
+```
+
+Why this matters: A full design doc session with 8 sections and 2-3 revision
+cycles per section can accumulate 30-50k tokens of conversation. Incremental
+writing keeps the live context at ~3-5k tokens (only the current section's
+discussion), because completed sections are persisted to disk.
+
 ### Multi-File Writes
 
 When a change affects multiple files:
