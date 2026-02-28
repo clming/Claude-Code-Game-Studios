@@ -57,14 +57,19 @@ Analyze project structure and content:
 
 ### 2. Classify Project Stage
 
-Based on scanned artifacts, determine stage:
+Based on scanned artifacts, determine stage. Check `production/stage.txt` first —
+if it exists, use its value (explicit override from `/gate-check`). Otherwise,
+auto-detect using these heuristics (check from most-advanced backward):
 
 | Stage | Indicators |
 |-------|-----------|
-| **Concept** | No code or minimal prototype, maybe idea docs |
-| **Pre-production** | Design docs started, prototypes, no main src/ |
-| **Production** | Active src/, sprint plans, growing systems |
-| **Post-Launch** | Released, production/ has release history, maintenance focus |
+| **Concept** | No game concept doc, brainstorming phase |
+| **Systems Design** | Game concept exists, systems index missing or incomplete |
+| **Technical Setup** | Systems index exists, engine not configured |
+| **Pre-Production** | Engine configured, `src/` has <10 source files |
+| **Production** | `src/` has 10+ source files, active development |
+| **Polish** | Explicit only (set by `/gate-check` Production → Polish gate) |
+| **Release** | Explicit only (set by `/gate-check` Polish → Release gate) |
 
 ### 3. Collaborative Gap Identification
 
@@ -85,7 +90,7 @@ Use template: `.claude/docs/templates/project-stage-report.md`
 # Project Stage Analysis
 
 **Date**: [date]
-**Stage**: [Concept/Pre-production/Production/Post-Launch]
+**Stage**: [Concept/Systems Design/Technical Setup/Pre-Production/Production/Polish/Release]
 
 ## Completeness Overview
 - Design: [X%] ([N] docs, [gaps])
