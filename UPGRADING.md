@@ -14,6 +14,7 @@ Or check `README.md` for the version badge.
 ## Table of Contents
 
 - [Upgrade Strategies](#upgrade-strategies)
+- [v0.2.0 → v0.3.0](#v020--v030)
 - [v0.1.0 → v0.2.0](#v010--v020)
 
 ---
@@ -73,6 +74,130 @@ Best when: you didn't use git to set up the template (just downloaded a zip).
 2. Copy the files listed under **"Safe to overwrite"** directly.
 3. For files under **"Merge carefully"**, open both versions side-by-side
    and manually merge the structural changes while keeping your content.
+
+---
+
+## v0.2.0 → v0.3.0
+
+**Released:** 2026-03-09
+**Commit range:** `e289ce9..HEAD`
+**Key themes:** `/design-system` GDD authoring, `/map-systems` rename, custom status line
+
+### Breaking Changes
+
+#### `/design-systems` renamed to `/map-systems`
+
+The `/design-systems` skill was renamed to `/map-systems` for clarity
+(decomposing = *mapping*, not *designing*).
+
+**Action required:** Update any documentation, notes, or scripts that invoke
+`/design-systems`. The new invocation is `/map-systems`.
+
+### What Changed
+
+| Category | Changes |
+|----------|---------|
+| **New skills** | `/design-system` (guided GDD authoring, section-by-section) |
+| **Renamed skills** | `/design-systems` → `/map-systems` (breaking rename) |
+| **New files** | `.claude/statusline.sh`, `.claude/settings.json` statusline config |
+| **Skill updates** | `/gate-check` — writes `production/stage.txt` on PASS, new phase definitions |
+| **Skill updates** | `brainstorm`, `start`, `design-review`, `project-stage-detect`, `setup-engine` — cross-reference fixes |
+| **Bug fixes** | `log-agent.sh`, `validate-commit.sh` — hook execution fixed |
+| **Docs** | `UPGRADING.md` added, `README.md` updated, `WORKFLOW-GUIDE.md` updated |
+
+---
+
+### Files: Safe to Overwrite
+
+**New files to add:**
+```
+.claude/skills/design-system/SKILL.md
+.claude/statusline.sh
+```
+
+**Existing files to overwrite (no user content):**
+```
+.claude/skills/map-systems/SKILL.md      ← was design-systems/SKILL.md
+.claude/skills/gate-check/SKILL.md
+.claude/skills/brainstorm/SKILL.md
+.claude/skills/start/SKILL.md
+.claude/skills/design-review/SKILL.md
+.claude/skills/project-stage-detect/SKILL.md
+.claude/skills/setup-engine/SKILL.md
+.claude/hooks/log-agent.sh
+.claude/hooks/validate-commit.sh
+README.md
+docs/WORKFLOW-GUIDE.md
+UPGRADING.md
+```
+
+**Delete (replaced by rename):**
+```
+.claude/skills/design-systems/   ← entire directory; replaced by map-systems/
+```
+
+---
+
+### Files: Merge Carefully
+
+#### `.claude/settings.json`
+
+The new version adds a `statusLine` configuration block pointing to
+`.claude/statusline.sh`. If you haven't customized `settings.json`, overwriting
+is safe. Otherwise, add this block manually:
+
+```json
+"statusLine": {
+  "script": ".claude/statusline.sh"
+}
+```
+
+---
+
+### New Features
+
+#### Custom Status Line
+
+`.claude/statusline.sh` displays a 7-stage production pipeline breadcrumb in
+the terminal status line:
+
+```
+ctx: 42% | claude-sonnet-4-6 | Systems Design
+```
+
+In Production/Polish/Release stages, it also shows the active Epic/Feature/Task
+from `production/session-state/active.md` if a `<!-- STATUS -->` block is present:
+
+```
+ctx: 42% | claude-sonnet-4-6 | Production | Combat System > Melee Combat > Hitboxes
+```
+
+The current stage is auto-detected from project artifacts, or can be pinned by
+writing a stage name to `production/stage.txt`.
+
+#### `/gate-check` Stage Advancement
+
+When a gate PASS verdict is confirmed, `/gate-check` now writes the new stage
+name to `production/stage.txt`. This immediately updates the status line for all
+future sessions without requiring manual file edits.
+
+---
+
+### After Upgrading
+
+1. **Delete the old skill directory:**
+   ```bash
+   rm -rf .claude/skills/design-systems/
+   ```
+
+2. **Test the status line** by starting a Claude Code session — you should see
+   the stage breadcrumb in the terminal footer.
+
+3. **Verify hook execution** still works:
+   ```bash
+   bash .claude/hooks/log-agent.sh '{}' '{}'
+   bash .claude/hooks/validate-commit.sh '{}' '{}'
+   ```
 
 ---
 
