@@ -243,9 +243,10 @@ Dependency notes:
 
 | Question | Owner | Deadline | Resolution |
 |----------|-------|----------|-----------|
-| What exact jelly rule should MVP use: clear when matched on-cell, clear when affected by any adjacent blast/line, or another explicit rule? | User + future tuning pass | Before implementation | Jelly clears only when the covered cell itself is included in a valid clear payload |
+| What exact jelly rule should MVP use: clear when matched on-cell, clear when affected by any adjacent blast/line, or another explicit rule? | User + tuning pass | Before implementation | Locked for MVP: jelly clears only when the covered cell itself is included in a valid clear payload; broader variants are future tuning options |
 | Which blocker family should be the first true non-overlay obstacle in MVP? | User | Before obstacle implementation | Not yet decided |
-| Should frozen ingredient-linked content live entirely here or split more deeply with Frozen Ingredient Objective System later? | User + future design pass | Before ingredient implementation | Keep board-state presence here; let Frozen Ingredient Objective System define extended objective semantics later |
+| Should frozen ingredient-linked content live entirely here or split more deeply with Frozen Ingredient Objective System later? | User + Frozen Ingredient Objective System | Before implementation | Locked for MVP: keep board-state presence here and let Frozen Ingredient Objective System define objective semantics |
 | Do any obstacle types in MVP block refill entry, or should refill blocking wait until later complexity tiers? | User | Before implementation | Default assumption is most MVP obstacles do not create exotic refill rules |
+
 
 

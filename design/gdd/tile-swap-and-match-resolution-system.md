@@ -256,5 +256,6 @@ Dependency notes:
 |----------|-------|----------|-----------|
 | Should move consumption happen on accepted swaps only, or on every structurally attempted swap? | User + future Level Goal and Move Limit System design | Before move system implementation | Not yet decided |
 | Which tile/content categories are swappable in MVP besides standard matchable tiles? | User + future Obstacle and Special Tile System design | Before obstacle implementation | Not yet decided |
-| Should special tiles created from match patterns spawn at the origin tile, destination tile, or a deterministic priority cell? | User + future Power-Up Creation and Activation System design | Before power-up implementation | Not yet decided |
+| Should special tiles created from match patterns spawn at the origin tile, destination tile, or a deterministic priority cell? | User + Power-Up Creation and Activation System | Before implementation | Use swap destination when eligible; otherwise use the deterministic lowest-y then lowest-x priority cell |
 | Should invalid swaps be rejected instantly or play a short reversible animation before returning to stable state? | User + future Juice Feedback System design | Before polish implementation | Not yet decided |
+

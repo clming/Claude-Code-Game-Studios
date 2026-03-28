@@ -253,7 +253,7 @@ Dependency notes:
 
 | Question | Owner | Deadline | Resolution |
 |----------|-------|----------|-----------|
-| Should MVP store last-selected/current map focus node on relaunch, or always reopen on highest unlocked/current recommended node? | User | Before implementation | Not yet decided |
+| Should MVP store last-selected/current map focus node on relaunch, or always reopen on highest unlocked/current recommended node? | User | Before implementation | MVP should reopen on the highest unlocked current-recommended node; persisting last map focus is optional and deferred |
 | Should settings writes happen immediately on change, or be lightly batched until menu exit/app suspend? | User + future implementation pass | Before implementation | Not yet decided |
 | Does the sample need more than one local profile/save slot? | User | Before implementation | Single local profile assumed for MVP |
 | Should development builds include a simple save-reset/debug-clear path for rapid iteration? | User + future tooling pass | Before implementation | Recommended, not yet formally locked |
@@ -263,3 +263,4 @@ Open question notes:
 1. None of these questions block a durable MVP persistence contract.
 2. The guiding principle is safety: save only what should outlive the session,
    and never let persistence become a hidden source of gameplay-state bugs.
+

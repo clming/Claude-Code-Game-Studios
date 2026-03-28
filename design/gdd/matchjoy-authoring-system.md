@@ -529,7 +529,7 @@ Acceptance notes:
 | Should level assets use a single unified ScriptableObject schema for all levels, or support subtype variants for special level formats? | User + Codex | Before authoring more than the first 10 levels | Default assumption is a unified schema unless variation pressure proves otherwise |
 | How much custom Unity editor tooling is required for the sample: Inspector-only workflow, custom editor windows, or grid painting tools? | User | Before large-scale content production | Not yet decided |
 | Should partially authored boards support seeded deterministic random fill for repeatable debugging and balancing? | User + future Cascade, Refill, and Determinism System design | Before gameplay prototype hardening | Recommended, but not yet locked |
-| How should star thresholds be authored in the final product: move-efficiency based, score-based, or another completion metric? | User + future Results, Retry, and Star Rating System design | Before results system design is finalized | Schema now assumes a star policy field, but the final metric is still undecided |
+| How should star thresholds be authored in the final product: move-efficiency based, score-based, or another completion metric? | User + Results, Retry, and Star Rating System | Before implementation | MVP uses move-efficiency thresholds with a star-policy field retained for future extensibility |
 | Should the level data schema include optional teaching tags, hint markers, or onboarding metadata from the start, or wait until tutorial needs are clearer? | User + future Onboarding and Tutorial Messaging System design | Before onboarding system design | Lean default recommended; keep extensibility in schema |
 | How should content versioning be handled if level assets change after persistence has already recorded player progress? | User + future Save/Load and Settings Persistence System design | Before persistence implementation | Not yet decided |
 | Should obstacle configuration live entirely inside level assets, or should some obstacle parameters be referenced from shared obstacle definitions plus per-level overrides? | User + future Obstacle and Special Tile System design | Before obstacle-heavy content production | Shared definitions plus per-level placement is likely best, but not finalized |
@@ -550,6 +550,7 @@ Open question notes:
 
 4. Questions that involve persistence, star rating, and obstacle schema should be
    resolved before those dependent systems enter implementation.
+
 
 
 

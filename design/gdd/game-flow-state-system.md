@@ -288,7 +288,7 @@ Dependency notes:
 | Question | Owner | Deadline | Resolution |
 |----------|-------|----------|-----------|
 | Should MVP include a distinct title/home shell screen before the chapter map, or treat map as the first meaningful shell state after boot? | User | Before UI implementation | Not yet decided |
-| What is the exact safe pause boundary rule during long cascade/power-up chains: immediate visual pause request with deferred commit, or only accept pause at board-stable moments? | User + future runtime implementation pass | Before implementation | Not yet decided |
+| What is the exact safe pause boundary rule during long cascade/power-up chains: immediate visual pause request with deferred commit, or only accept pause at board-stable moments? | User + runtime implementation pass | Before implementation | Pause requests may be acknowledged immediately in UI, but flow enters true Level Paused only at a board-stable safe boundary after the current committed resolution step completes |
 | Should retry from victory be exposed in MVP result flow, or only next/return actions? | User + future UX pass | Before implementation | Not yet decided |
 | Does the sample need a dedicated end-of-campaign flow state beyond normal result -> map return? | User | Before final sample polish | Not yet decided |
 
@@ -297,3 +297,4 @@ Open question notes:
 1. None of these questions block a coherent MVP state machine.
 2. The default principle is determinism: state transitions should be easy to
    reason about both for the player and for implementation.
+
