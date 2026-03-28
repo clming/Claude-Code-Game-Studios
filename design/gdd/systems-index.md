@@ -25,23 +25,23 @@ production.
 
 | # | System Name | Category | Priority | Status | Design Doc | Depends On |
 |---|-------------|----------|----------|--------|------------|------------|
-| 1 | Board Grid State System | Core | MVP | Not Started | design/gdd/board-grid-state-system.md | - |
-| 2 | Tile Swap and Match Resolution System | Gameplay | MVP | Not Started | design/gdd/tile-swap-and-match-resolution-system.md | Board Grid State System |
-| 3 | Cascade, Refill, and Determinism System | Gameplay | MVP | Not Started | design/gdd/cascade-refill-and-determinism-system.md | Board Grid State System, Tile Swap and Match Resolution System |
-| 4 | Level Goal and Move Limit System | Gameplay | MVP | Not Started | design/gdd/level-goal-and-move-limit-system.md | Board Grid State System, Tile Swap and Match Resolution System, Cascade, Refill, and Determinism System |
-| 5 | Power-Up Creation and Activation System | Gameplay | MVP | Not Started | design/gdd/power-up-creation-and-activation-system.md | Board Grid State System, Tile Swap and Match Resolution System, Cascade, Refill, and Determinism System |
-| 6 | MatchJoy Authoring System (inferred) | Core | MVP | Not Started | design/gdd/matchjoy-authoring-system.md | Board Grid State System |
+| 1 | Board Grid State System | Core | MVP | In Design | design/gdd/board-grid-state-system.md | - |
+| 2 | Tile Swap and Match Resolution System | Gameplay | MVP | In Design | design/gdd/tile-swap-and-match-resolution-system.md | Board Grid State System |
+| 3 | Cascade, Refill, and Determinism System | Gameplay | MVP | In Design | design/gdd/cascade-refill-and-determinism-system.md | Board Grid State System, Tile Swap and Match Resolution System |
+| 4 | Level Goal and Move Limit System | Gameplay | MVP | In Design | design/gdd/level-goal-and-move-limit-system.md | Board Grid State System, Tile Swap and Match Resolution System, Cascade, Refill, and Determinism System |
+| 5 | Power-Up Creation and Activation System | Gameplay | MVP | In Design | design/gdd/power-up-creation-and-activation-system.md | Board Grid State System, Tile Swap and Match Resolution System, Cascade, Refill, and Determinism System |
+| 6 | MatchJoy Authoring System (inferred) | Core | MVP | In Design / Reviewed Once | design/gdd/matchjoy-authoring-system.md | Board Grid State System |
 | 7 | Game Flow State System (inferred) | Core | MVP | Not Started | design/gdd/game-flow-state-system.md | - |
 | 8 | Input and Tile Selection System (inferred) | Core | MVP | Not Started | design/gdd/input-and-tile-selection-system.md | Game Flow State System, Board Grid State System |
-| 9 | Core HUD and Goal Feedback System (inferred) | UI | MVP | Not Started | design/gdd/core-hud-and-goal-feedback-system.md | Level Goal and Move Limit System, Power-Up Creation and Activation System, Game Flow State System |
+| 9 | Core HUD and Goal Feedback System (inferred) | UI | MVP | In Design | design/gdd/core-hud-and-goal-feedback-system.md | Level Goal and Move Limit System, Power-Up Creation and Activation System, Game Flow State System |
 | 10 | Juice Feedback System (animation, VFX, SFX timing) (inferred) | Audio | MVP | Not Started | design/gdd/juice-feedback-system.md | Tile Swap and Match Resolution System, Cascade, Refill, and Determinism System, Power-Up Creation and Activation System |
-| 11 | Chapter Map Progression System | Progression | Vertical Slice | Not Started | design/gdd/chapter-map-progression-system.md | Game Flow State System, Level Goal and Move Limit System |
-| 12 | Obstacle and Special Tile System (inferred) | Gameplay | Vertical Slice | Not Started | design/gdd/obstacle-and-special-tile-system.md | Board Grid State System, Cascade, Refill, and Determinism System, Level Goal and Move Limit System |
+| 11 | Chapter Map Progression System | Progression | Vertical Slice | In Design | design/gdd/chapter-map-progression-system.md | Game Flow State System, Level Goal and Move Limit System |
+| 12 | Obstacle and Special Tile System (inferred) | Gameplay | Vertical Slice | In Design | design/gdd/obstacle-and-special-tile-system.md | Board Grid State System, Cascade, Refill, and Determinism System, Level Goal and Move Limit System |
 | 13 | Level Difficulty Curve and Content Pacing System (inferred) | Progression | Vertical Slice | Not Started | design/gdd/level-difficulty-curve-and-content-pacing-system.md | MatchJoy Authoring System, Level Goal and Move Limit System, Obstacle and Special Tile System, Power-Up Creation and Activation System |
-| 14 | Results, Retry, and Star Rating System (inferred) | UI | Vertical Slice | Not Started | design/gdd/results-retry-and-star-rating-system.md | Level Goal and Move Limit System, Game Flow State System, Chapter Map Progression System |
+| 14 | Results, Retry, and Star Rating System (inferred) | UI | Vertical Slice | In Design | design/gdd/results-retry-and-star-rating-system.md | Level Goal and Move Limit System, Game Flow State System, Chapter Map Progression System |
 | 15 | Menu and Session Shell UI System (inferred) | UI | Vertical Slice | Not Started | design/gdd/menu-and-session-shell-ui-system.md | Game Flow State System, Chapter Map Progression System |
 | 16 | Save/Load and Settings Persistence System (inferred) | Persistence | Vertical Slice | Not Started | design/gdd/save-load-and-settings-persistence-system.md | Game Flow State System, Chapter Map Progression System, Results, Retry, and Star Rating System |
-| 17 | Frozen Ingredient Objective System | Gameplay | Vertical Slice | Not Started | design/gdd/frozen-ingredient-objective-system.md | Board Grid State System, Tile Swap and Match Resolution System, Cascade, Refill, and Determinism System, Level Goal and Move Limit System |
+| 17 | Frozen Ingredient Objective System | Gameplay | Vertical Slice | In Design | design/gdd/frozen-ingredient-objective-system.md | Board Grid State System, Tile Swap and Match Resolution System, Cascade, Refill, and Determinism System, Level Goal and Move Limit System |
 | 18 | Economy-Free Booster Scope Decision System (inferred placeholder) | Meta | Alpha | Not Started | design/gdd/booster-scope-decision-system.md | Level Goal and Move Limit System, Chapter Map Progression System, Results, Retry, and Star Rating System |
 | 19 | Onboarding and Tutorial Messaging System (inferred) | Meta | Alpha | Not Started | design/gdd/onboarding-and-tutorial-messaging-system.md | Game Flow State System, Input and Tile Selection System, Core HUD and Goal Feedback System, Chapter Map Progression System |
 | 20 | Audio Presentation System (music, mixing, routing) (inferred) | Audio | Alpha | Not Started | design/gdd/audio-presentation-system.md | Game Flow State System, Juice Feedback System |
@@ -228,27 +228,29 @@ Effort legend: S = 1 focused design session, M = 2-3 sessions, L = 4+ sessions.
 | Total systems identified | 24 |
 | Actively planned systems | 22 |
 | Explicitly cut / out-of-scope systems | 2 |
-| Design docs started | 2 |
+| Design docs started | 11 |
 | Design docs reviewed | 1 |
 | Design docs approved | 0 |
-| MVP systems designed | 1/10 |
-| Vertical Slice systems designed | 0/7 |
+| MVP systems designed | 7/10 |
+| Vertical Slice systems designed | 4/7 |
 | Alpha systems designed | 0/4 |
 
 Notes:
-- Existing design doc count includes `design/gdd/game-concept.md`.
-- design/gdd/matchjoy-authoring-system.md exists and has completed an initial design-review pass.
+- Existing system design docs currently drafted: `matchjoy-authoring-system`, `board-grid-state-system`, `tile-swap-and-match-resolution-system`, `cascade-refill-and-determinism-system`, `level-goal-and-move-limit-system`, `power-up-creation-and-activation-system`, `core-hud-and-goal-feedback-system`, `obstacle-and-special-tile-system`, `frozen-ingredient-objective-system`, `results-retry-and-star-rating-system`, `chapter-map-progression-system`.
+- `design/gdd/matchjoy-authoring-system.md` has completed one design-review pass.
+- Remaining highest-leverage gaps are `Game Flow State System`, `Input and Tile Selection System`, `Save/Load and Settings Persistence System`, and a focused cross-document review pass.
 
 ---
 
 ## Next Steps
 
-- [ ] Review and approve this systems enumeration against the current concept scope
-- [ ] Design `Board Grid State System` first
-- [ ] Design `Tile Swap and Match Resolution System` immediately after the board schema is stable
-- [ ] Prototype the full core loop early: swap -> match -> clear -> cascade -> refill
-- [ ] Decide whether boosters remain deferred before leaving Vertical Slice planning
-- [ ] Run `/design-review` on each completed GDD before starting implementation
+- [ ] Refresh dependency and naming consistency across the drafted core/vertical-slice GDDs
+- [ ] Design `Game Flow State System` next to connect map, session, result, retry, and return flow
+- [ ] Design `Input and Tile Selection System` after game flow is stable
+- [ ] Design `Save/Load and Settings Persistence System` before implementation planning
+- [ ] Run focused `/design-review` passes on the drafted gameplay chain before implementation
+- [ ] Prototype the full core loop early: swap -> match -> clear -> cascade -> refill -> goal -> result -> map
+
 
 
 
