@@ -34,10 +34,10 @@ production.
 | 7 | Game Flow State System (inferred) | Core | MVP | In Design | design/gdd/game-flow-state-system.md | - |
 | 8 | Input and Tile Selection System (inferred) | Core | MVP | In Design | design/gdd/input-and-tile-selection-system.md | Game Flow State System, Board Grid State System |
 | 9 | Core HUD and Goal Feedback System (inferred) | UI | MVP | In Design | design/gdd/core-hud-and-goal-feedback-system.md | Level Goal and Move Limit System, Power-Up Creation and Activation System, Game Flow State System |
-| 10 | Juice Feedback System (animation, VFX, SFX timing) (inferred) | Audio | MVP | Not Started | design/gdd/juice-feedback-system.md | Tile Swap and Match Resolution System, Cascade, Refill, and Determinism System, Power-Up Creation and Activation System |
+| 10 | Juice Feedback System (animation, VFX, SFX timing) (inferred) | Audio | MVP | In Design | design/gdd/juice-feedback-system.md | Tile Swap and Match Resolution System, Cascade, Refill, and Determinism System, Power-Up Creation and Activation System |
 | 11 | Chapter Map Progression System | Progression | Vertical Slice | In Design | design/gdd/chapter-map-progression-system.md | Game Flow State System, Level Goal and Move Limit System |
 | 12 | Obstacle and Special Tile System (inferred) | Gameplay | Vertical Slice | In Design | design/gdd/obstacle-and-special-tile-system.md | Board Grid State System, Cascade, Refill, and Determinism System, Level Goal and Move Limit System |
-| 13 | Level Difficulty Curve and Content Pacing System (inferred) | Progression | Vertical Slice | Not Started | design/gdd/level-difficulty-curve-and-content-pacing-system.md | MatchJoy Authoring System, Level Goal and Move Limit System, Obstacle and Special Tile System, Power-Up Creation and Activation System |
+| 13 | Level Difficulty Curve and Content Pacing System (inferred) | Progression | Vertical Slice | In Design | design/gdd/level-difficulty-curve-and-content-pacing-system.md | MatchJoy Authoring System, Level Goal and Move Limit System, Obstacle and Special Tile System, Power-Up Creation and Activation System |
 | 14 | Results, Retry, and Star Rating System (inferred) | UI | Vertical Slice | In Design | design/gdd/results-retry-and-star-rating-system.md | Level Goal and Move Limit System, Game Flow State System, Chapter Map Progression System |
 | 15 | Menu and Session Shell UI System (inferred) | UI | Vertical Slice | Not Started | design/gdd/menu-and-session-shell-ui-system.md | Game Flow State System, Chapter Map Progression System |
 | 16 | Save/Load and Settings Persistence System (inferred) | Persistence | Vertical Slice | In Design | design/gdd/save-load-and-settings-persistence-system.md | Game Flow State System, Chapter Map Progression System, Results, Retry, and Star Rating System |
@@ -228,17 +228,17 @@ Effort legend: S = 1 focused design session, M = 2-3 sessions, L = 4+ sessions.
 | Total systems identified | 24 |
 | Actively planned systems | 22 |
 | Explicitly cut / out-of-scope systems | 2 |
-| Design docs started | 14 |
+| Design docs started | 16 |
 | Design docs reviewed | 1 |
 | Design docs approved | 0 |
-| MVP systems designed | 9/10 |
-| Vertical Slice systems designed | 5/7 |
+| MVP systems designed | 10/10 |
+| Vertical Slice systems designed | 6/7 |
 | Alpha systems designed | 0/4 |
 
 Notes:
-- Existing system design docs currently drafted: `matchjoy-authoring-system`, `board-grid-state-system`, `tile-swap-and-match-resolution-system`, `cascade-refill-and-determinism-system`, `level-goal-and-move-limit-system`, `power-up-creation-and-activation-system`, `game-flow-state-system`, `input-and-tile-selection-system`, `core-hud-and-goal-feedback-system`, `obstacle-and-special-tile-system`, `frozen-ingredient-objective-system`, `results-retry-and-star-rating-system`, `chapter-map-progression-system`, `save-load-and-settings-persistence-system`.
+- Existing system design docs currently drafted: `matchjoy-authoring-system`, `board-grid-state-system`, `tile-swap-and-match-resolution-system`, `cascade-refill-and-determinism-system`, `level-goal-and-move-limit-system`, `power-up-creation-and-activation-system`, `game-flow-state-system`, `input-and-tile-selection-system`, `core-hud-and-goal-feedback-system`, `juice-feedback-system`, `obstacle-and-special-tile-system`, `frozen-ingredient-objective-system`, `results-retry-and-star-rating-system`, `chapter-map-progression-system`, `save-load-and-settings-persistence-system`, `level-difficulty-curve-and-content-pacing-system`.
 - `design/gdd/matchjoy-authoring-system.md` has completed one design-review pass.
-- Remaining highest-leverage gaps are a focused cross-document review pass, `Menu and Session Shell UI System`, `Juice Feedback System`, and `Level Difficulty Curve and Content Pacing System`.
+- Remaining highest-leverage gaps are a focused cross-document review pass, `Menu and Session Shell UI System`, and implementation planning for the first playable prototype.
 
 ---
 
@@ -250,6 +250,7 @@ Notes:
 - [ ] Design `Menu and Session Shell UI System` if you want a clearer non-level wrapper before implementation
 - [ ] Design `Juice Feedback System` before polish/prototype feel work
 - [ ] Prototype the full core loop early: swap -> match -> clear -> cascade -> refill -> goal -> result -> map
+
 
 
 
