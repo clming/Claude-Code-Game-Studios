@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using MatchJoy.Board;
 using UnityEngine;
@@ -7,6 +7,24 @@ namespace MatchJoy.UI
 {
     public sealed class BoardView : MonoBehaviour
     {
+        public enum PresentationMode
+        {
+            Immediate,
+            ResolvedSequence
+        }
+
+        public readonly struct SwapPresentation
+        {
+            public SwapPresentation(BoardCoordinate source, BoardCoordinate target)
+            {
+                Source = source;
+                Target = target;
+            }
+
+            public BoardCoordinate Source { get; }
+            public BoardCoordinate Target { get; }
+        }
+
         private readonly struct CellRenderSnapshot
         {
             public CellRenderSnapshot(bool isPlayable, bool isOccupied, int tileId, bool isSelected)
@@ -28,14 +46,29 @@ namespace MatchJoy.UI
         [SerializeField] private Vector2 _cellSize = new(72f, 72f);
         [SerializeField] private Vector2 _cellSpacing = new(6f, 6f);
         [SerializeField] private bool _logDiffRefreshes;
+        [SerializeField] private float _initialPopulateStepDelay = 0.012f;
+        [SerializeField] private float _refillRowStepDelay = 0.018f;
+        [SerializeField] private float _tileChangeWaveStepDelay = 0.01f;
+        [SerializeField] private float _refillSpawnOffsetCells = 0.45f;
+        [SerializeField] private float _swapPreviewDuration = 0.1f;
+        [SerializeField] private float _swapPreviewOffsetCells = 0.22f;
+        [SerializeField] private float _clearPreviewDuration = 0.06f;
 
         private readonly Dictionary<(int X, int Y), BoardCellView> _spawnedCells = new();
         private readonly Dictionary<(int X, int Y), CellRenderSnapshot> _lastRenderedStates = new();
 
+        private int _activePresentationToken;
+        private int _pendingAnimatedCellCount;
+
         public event Action<BoardCoordinate> CellClicked;
         public event Action<BoardCoordinate, BoardCoordinate> SwipeRequested;
+        public event Action PresentationCompleted;
 
-        public void Render(BoardState board, BoardCoordinate? selectedCoordinate = null)
+        public void Render(
+            BoardState board,
+            BoardCoordinate? selectedCoordinate = null,
+            PresentationMode presentationMode = PresentationMode.Immediate,
+            SwapPresentation? swapPresentation = null)
         {
             if (board == null || _cellRoot == null || _cellTemplate == null)
             {
@@ -43,32 +76,69 @@ namespace MatchJoy.UI
             }
 
             EnsureGrid(board);
+            var plan = CreatePresentationPlan();
+
+            _activePresentationToken++;
+            var currentPresentationToken = _activePresentationToken;
+            _pendingAnimatedCellCount = 0;
 
             var updatedCellCount = 0;
             foreach (var cell in board.GetAllCells())
             {
-                if (_spawnedCells.TryGetValue((cell.Coordinate.X, cell.Coordinate.Y), out var view))
+                if (!_spawnedCells.TryGetValue((cell.Coordinate.X, cell.Coordinate.Y), out var view))
                 {
-                    var isSelected = selectedCoordinate.HasValue
-                        && selectedCoordinate.Value.X == cell.Coordinate.X
-                        && selectedCoordinate.Value.Y == cell.Coordinate.Y;
-                    var nextSnapshot = new CellRenderSnapshot(cell.IsPlayable, cell.IsOccupied, cell.TileId, isSelected);
-
-                    if (_lastRenderedStates.TryGetValue((cell.Coordinate.X, cell.Coordinate.Y), out var previousSnapshot)
-                        && previousSnapshot.Equals(nextSnapshot))
-                    {
-                        continue;
-                    }
-
-                    view.Render(cell.IsPlayable, cell.IsOccupied, cell.TileId, isSelected);
-                    _lastRenderedStates[(cell.Coordinate.X, cell.Coordinate.Y)] = nextSnapshot;
-                    updatedCellCount++;
+                    continue;
                 }
+
+                var isSelected = selectedCoordinate.HasValue
+                    && selectedCoordinate.Value.X == cell.Coordinate.X
+                    && selectedCoordinate.Value.Y == cell.Coordinate.Y;
+                var nextSnapshot = new CellRenderSnapshot(cell.IsPlayable, cell.IsOccupied, cell.TileId, isSelected);
+                var hasPreviousSnapshot = _lastRenderedStates.TryGetValue((cell.Coordinate.X, cell.Coordinate.Y), out var previousSnapshot);
+
+                if (hasPreviousSnapshot && previousSnapshot.Equals(nextSnapshot))
+                {
+                    continue;
+                }
+
+                var transition = plan.BuildTransition(
+                    board,
+                    cell.Coordinate,
+                    hasPreviousSnapshot,
+                    previousSnapshot.IsOccupied,
+                    previousSnapshot.TileId,
+                    previousSnapshot.IsSelected,
+                    nextSnapshot.IsOccupied,
+                    nextSnapshot.TileId,
+                    nextSnapshot.IsSelected,
+                    presentationMode,
+                    swapPresentation);
+
+                var isAnimated = view.Render(
+                    cell.IsPlayable,
+                    cell.IsOccupied,
+                    cell.TileId,
+                    isSelected,
+                    transition,
+                    () => HandleCellPresentationCompleted(currentPresentationToken));
+
+                if (isAnimated)
+                {
+                    _pendingAnimatedCellCount++;
+                }
+
+                _lastRenderedStates[(cell.Coordinate.X, cell.Coordinate.Y)] = nextSnapshot;
+                updatedCellCount++;
             }
 
             if (_logDiffRefreshes)
             {
                 Debug.Log($"BoardView diff refresh updated {updatedCellCount} cells.", this);
+            }
+
+            if (_pendingAnimatedCellCount == 0)
+            {
+                PresentationCompleted?.Invoke();
             }
         }
 
@@ -82,6 +152,19 @@ namespace MatchJoy.UI
                     view.SwipeRequested -= HandleSwipeRequested;
                 }
             }
+        }
+
+        private BoardPresentationPlan CreatePresentationPlan()
+        {
+            return new BoardPresentationPlan(
+                _cellSize,
+                _initialPopulateStepDelay,
+                _refillRowStepDelay,
+                _tileChangeWaveStepDelay,
+                _refillSpawnOffsetCells,
+                _swapPreviewDuration,
+                _swapPreviewOffsetCells,
+                _clearPreviewDuration);
         }
 
         private void EnsureGrid(BoardState board)
@@ -119,6 +202,20 @@ namespace MatchJoy.UI
             }
 
             _cellTemplate.gameObject.SetActive(false);
+        }
+
+        private void HandleCellPresentationCompleted(int presentationToken)
+        {
+            if (presentationToken != _activePresentationToken)
+            {
+                return;
+            }
+
+            _pendingAnimatedCellCount = Mathf.Max(0, _pendingAnimatedCellCount - 1);
+            if (_pendingAnimatedCellCount == 0)
+            {
+                PresentationCompleted?.Invoke();
+            }
         }
 
         private void HandleCellClicked(BoardCoordinate coordinate)
