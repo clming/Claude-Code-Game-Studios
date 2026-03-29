@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using UnityEngine;
 
 namespace MatchJoy.Flow
@@ -34,9 +34,14 @@ namespace MatchJoy.Flow
             TransitionTo(GameFlowState.LevelActive);
         }
 
+        public void EnterLevelPresentationSettling()
+        {
+            TransitionTo(GameFlowState.LevelPresentationSettling);
+        }
+
         public void PauseLevel()
         {
-            if (CurrentState != GameFlowState.LevelActive)
+            if (CurrentState != GameFlowState.LevelActive && CurrentState != GameFlowState.LevelPresentationSettling)
             {
                 return;
             }

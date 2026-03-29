@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using MatchJoy.Board;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -81,7 +82,7 @@ namespace MatchJoy.UI
             _coordinate = coordinate;
         }
 
-        public bool Render(bool isPlayable, bool isOccupied, int tileId, bool isSelected, RefreshTransition transition, Action completion = null)
+        public bool Render(bool isPlayable, bool isOccupied, int tileId, bool isSelected, BoardCellPresentationInstruction instruction, Action completion = null)
         {
             _isPlayable = isPlayable;
 
@@ -94,14 +95,14 @@ namespace MatchJoy.UI
             EnsureAnimatedRoot();
             ResetAnimatedRoot();
 
-            if (!RequiresAnimation(transition))
+            if (!instruction.RequiresAnimation)
             {
                 ApplyVisualState(isPlayable, isOccupied, tileId, isSelected);
                 completion?.Invoke();
                 return false;
             }
 
-            _activeAnimation = StartCoroutine(RunTransition(isPlayable, isOccupied, tileId, isSelected, transition, completion));
+            _activeAnimation = StartCoroutine(RunInstruction(isPlayable, isOccupied, tileId, isSelected, instruction, completion));
             return true;
         }
 
@@ -153,52 +154,105 @@ namespace MatchJoy.UI
             _hasTriggeredSwipe = false;
         }
 
-        private IEnumerator RunTransition(bool isPlayable, bool isOccupied, int tileId, bool isSelected, RefreshTransition transition, Action completion)
+        private IEnumerator RunInstruction(bool isPlayable, bool isOccupied, int tileId, bool isSelected, BoardCellPresentationInstruction instruction, Action completion)
         {
-            if (transition.ApplyStateAfterDelay)
+            foreach (var phase in instruction.Phases)
             {
-                yield return ApplyStateThenAnimate(isPlayable, isOccupied, tileId, isSelected, transition);
-            }
-            else
-            {
-                ApplyVisualState(isPlayable, isOccupied, tileId, isSelected);
-                yield return PlayRefreshAnimation(transition, isOccupied);
+                yield return PlayPresentationPhase(phase, isPlayable, isOccupied, tileId, isSelected);
             }
 
             _activeAnimation = null;
             completion?.Invoke();
         }
 
-        private static bool RequiresAnimation(RefreshTransition transition)
+        public static IReadOnlyList<BoardCellPresentationPhase> BuildPresentationPhases(RefreshTransition transition, bool isOccupied)
         {
-            return transition.Type != RefreshTransitionType.None
-                || transition.ApplyStateAfterDelay
-                || transition.DelaySeconds > 0f
-                || transition.PreApplyDuration > 0f;
-        }
+            var phases = new List<BoardCellPresentationPhase>();
 
-        private IEnumerator ApplyStateThenAnimate(bool isPlayable, bool isOccupied, int tileId, bool isSelected, RefreshTransition transition)
-        {
-            if (transition.PreApplyDuration > 0f)
+            if (transition.ApplyStateAfterDelay && transition.PreApplyDuration > 0f)
             {
                 switch (transition.PreApplyEffectType)
                 {
                     case PreApplyEffectType.SwapPreview:
-                        yield return PlaySwapPreview(transition.PreApplyOffset, transition.PreApplyDuration);
+                        phases.Add(BoardCellPresentationPhase.SwapPreview(transition.PreApplyDuration, transition.PreApplyOffset));
                         break;
                     case PreApplyEffectType.ClearFade:
-                        yield return PlayClearFade(transition.PreApplyDuration);
+                        phases.Add(BoardCellPresentationPhase.ClearFade(transition.PreApplyDuration));
                         break;
                 }
             }
 
-            if (transition.DelaySeconds > 0f)
+            if (transition.ApplyStateAfterDelay && transition.DelaySeconds > 0f)
             {
-                yield return new WaitForSecondsRealtime(transition.DelaySeconds);
+                phases.Add(BoardCellPresentationPhase.Wait(transition.DelaySeconds));
             }
 
-            ApplyVisualState(isPlayable, isOccupied, tileId, isSelected);
-            yield return PlayRefreshAnimation(new RefreshTransition(transition.Type, false, 0f, transition.OriginOffset), isOccupied);
+            phases.Add(BoardCellPresentationPhase.ApplyVisualState());
+
+            if (!transition.ApplyStateAfterDelay && transition.DelaySeconds > 0f)
+            {
+                phases.Add(BoardCellPresentationPhase.Wait(transition.DelaySeconds));
+            }
+
+            switch (transition.Type)
+            {
+                case RefreshTransitionType.InitialPopulate:
+                    if (isOccupied)
+                    {
+                        phases.Add(BoardCellPresentationPhase.InitialPopulateFade());
+                    }
+                    break;
+                case RefreshTransitionType.SelectionPulse:
+                    phases.Add(BoardCellPresentationPhase.SelectionPulse());
+                    break;
+                case RefreshTransitionType.TileChanged:
+                    phases.Add(BoardCellPresentationPhase.TileChangePulse());
+                    break;
+                case RefreshTransitionType.Refilled:
+                    phases.Add(BoardCellPresentationPhase.RefillDrop(transition.OriginOffset));
+                    break;
+            }
+
+            return phases;
+        }
+
+        private IEnumerator PlayPresentationPhase(
+            BoardCellPresentationPhase phase,
+            bool isPlayable,
+            bool isOccupied,
+            int tileId,
+            bool isSelected)
+        {
+            switch (phase.Type)
+            {
+                case BoardCellPresentationPhaseType.Wait:
+                    if (phase.DurationSeconds > 0f)
+                    {
+                        yield return new WaitForSecondsRealtime(phase.DurationSeconds);
+                    }
+                    break;
+                case BoardCellPresentationPhaseType.SwapPreview:
+                    yield return PlaySwapPreview(phase.Offset, phase.DurationSeconds);
+                    break;
+                case BoardCellPresentationPhaseType.ClearFade:
+                    yield return PlayClearFade(phase.DurationSeconds);
+                    break;
+                case BoardCellPresentationPhaseType.ApplyVisualState:
+                    ApplyVisualState(isPlayable, isOccupied, tileId, isSelected);
+                    break;
+                case BoardCellPresentationPhaseType.SelectionPulse:
+                    yield return PlayScalePulse(_selectionPulseScale, _selectionPulseDuration);
+                    break;
+                case BoardCellPresentationPhaseType.TileChangePulse:
+                    yield return PlayScalePulse(_tileChangeScale, _tileChangeDuration);
+                    break;
+                case BoardCellPresentationPhaseType.InitialPopulateFade:
+                    yield return PlayFadeInAnimation();
+                    break;
+                case BoardCellPresentationPhaseType.RefillDrop:
+                    yield return PlayRefillAnimation(phase.Offset);
+                    break;
+            }
         }
 
         private IEnumerator PlaySwapPreview(Vector2 offset, float duration)
@@ -270,40 +324,8 @@ namespace MatchJoy.UI
             }
         }
 
-        private IEnumerator PlayRefreshAnimation(RefreshTransition transition, bool isOccupied)
+        private IEnumerator PlayScalePulse(float peakScale, float duration)
         {
-            if (_animatedRoot == null)
-            {
-                yield break;
-            }
-
-            switch (transition.Type)
-            {
-                case RefreshTransitionType.InitialPopulate:
-                    if (isOccupied)
-                    {
-                        yield return PlayFadeInAnimation(transition.DelaySeconds);
-                    }
-                    break;
-                case RefreshTransitionType.SelectionPulse:
-                    yield return PlayScalePulse(_selectionPulseScale, _selectionPulseDuration, transition.DelaySeconds);
-                    break;
-                case RefreshTransitionType.TileChanged:
-                    yield return PlayScalePulse(_tileChangeScale, _tileChangeDuration, transition.DelaySeconds);
-                    break;
-                case RefreshTransitionType.Refilled:
-                    yield return PlayRefillAnimation(transition.DelaySeconds, transition.OriginOffset);
-                    break;
-            }
-        }
-
-        private IEnumerator PlayScalePulse(float peakScale, float duration, float delaySeconds)
-        {
-            if (delaySeconds > 0f)
-            {
-                yield return new WaitForSecondsRealtime(delaySeconds);
-            }
-
             var elapsed = 0f;
             var halfDuration = Mathf.Max(0.001f, duration * 0.5f);
 
@@ -321,13 +343,8 @@ namespace MatchJoy.UI
             ResetAnimatedRoot();
         }
 
-        private IEnumerator PlayFadeInAnimation(float delaySeconds)
+        private IEnumerator PlayFadeInAnimation()
         {
-            if (delaySeconds > 0f)
-            {
-                yield return new WaitForSecondsRealtime(delaySeconds);
-            }
-
             var backgroundColor = _background != null ? _background.color : Color.clear;
             var labelColor = _tileLabel != null ? _tileLabel.color : Color.clear;
             var elapsed = 0f;
@@ -352,13 +369,8 @@ namespace MatchJoy.UI
             }
         }
 
-        private IEnumerator PlayRefillAnimation(float delaySeconds, Vector2 originOffset)
+        private IEnumerator PlayRefillAnimation(Vector2 originOffset)
         {
-            if (delaySeconds > 0f)
-            {
-                yield return new WaitForSecondsRealtime(delaySeconds);
-            }
-
             var backgroundColor = _background != null ? _background.color : Color.clear;
             var labelColor = _tileLabel != null ? _tileLabel.color : Color.clear;
             var elapsed = 0f;
@@ -388,7 +400,7 @@ namespace MatchJoy.UI
                 _tileLabel.color = labelColor;
             }
 
-            yield return PlayScalePulse(_tileChangeScale, _tileChangeDuration, 0f);
+            yield return PlayScalePulse(_tileChangeScale, _tileChangeDuration);
             ResetAnimatedRoot();
         }
 

@@ -26,6 +26,7 @@ At the end of this setup, you should have one Unity scene that can:
 - let HUD / result closure land closer to the end of the board presentation instead of always updating immediately
 - let the view signal when its current presentation pass is actually done, so session/UI settlement can follow that event
 - keep the transition rules themselves in a separate presentation-planning layer instead of burying all of them inside `BoardView`
+- let each changed cell execute a lightweight internal presentation phase sequence instead of hardwiring all animation flow inside one branchy method
 - temporarily gate new board interactions while an accepted-swap presentation pass is still settling
 - optionally still run a debug swap from `PrototypeSessionDriver`
 
@@ -193,7 +194,28 @@ Optional debug recommendation:
 - move/result UI can now settle slightly later so board presentation reads first
 - current UI settlement now follows board-presentation completion events rather than only a guessed delay
 - transition decision logic can now be maintained separately from `BoardView` lifecycle/orchestration concerns
+- `BoardCellView` execution is now organized as a lightweight sequence of presentation phases, which gives the bridge a cleaner path toward richer staged timelines
 - accepted-swap presentation now temporarily blocks new board input until settlement completes
+- `BoardView` can now optionally log presentation-pass start/completion in addition to diff counts
+- lifecycle logging can now summarize how many cells used each transition type in the current pass
+- lifecycle logging can now also summarize the lightweight cell presentation phases used in the current pass
+- `BoardView` now remembers a pass-level summary for the latest presentation, so you can inspect recent bridge activity even after the Console has moved on
+- `BoardView` now also keeps a short rolling history of recent presentation passes, so consecutive swaps can be compared without relying only on live Console output
+- presentation passes now carry simple human-readable labels, so history/debug output is easier to match against concrete scene actions
+- presentation summaries now also record approximate pass duration, so repeated tests can compare not only what happened but how long the bridge took to settle
+- board render orchestration is now passed through a small render-request object instead of an ever-growing parameter list, which makes later presentation and UI expansion less invasive
+- those render requests now also carry explicit presentation intent and board presentation stage, so summaries and future timeline logic do not need to infer meaning from label text alone
+- `BoardView` now keeps its active presentation-pass runtime data in a dedicated internal context object, which reduces incidental state spread and makes later timeline expansion safer
+- `BoardPresentationPlan` now produces a presentation instruction object instead of only a raw cell transition, and that instruction carries both intent and stage metadata for richer board-wide sequencing later
+- each presentation pass now also builds a lightweight board-step plan (`Prepare -> ... -> Complete`) so pass history can describe board-level sequencing before a full sequencer exists
+- board-step planning is now generated through a dedicated pass planner instead of being assembled ad hoc inside `BoardView`, which keeps the next sequencer step cleaner
+- that pass planner now consumes an explicit planning context object, so later timeline hints can be added without stretching method signatures again
+- that planning context now carries both transition counts and phase counts, which lets board-step planning distinguish interaction feedback from broader resolve work a little more cleanly
+- it now also carries presentation mode and intent, so pass planning can react to request semantics directly instead of inferring everything from counts alone
+- each board step now also carries a lightweight reason code, so pass history is starting to capture why a step exists, not just its coarse type
+- board steps now also carry a lightweight completion mode (`Immediate` vs `AwaitAnimatedSettle`), which starts to model whether a future sequencer would advance instantly or wait for settle
+- each presentation pass now also builds a lightweight board-step plan (`Prepare -> ... -> Complete`) so pass history can describe board-level sequencing before a full sequencer exists
+- flow can now represent this bridge window explicitly as `Level Presentation Settling`
 
 ### CellRoot
 
@@ -320,6 +342,11 @@ After wiring, test in this order:
 13. Confirm repeated interactions do not cause stale delayed HUD/result updates from a previous presentation pass
 14. Confirm rapid extra taps/swipes during accepted-swap presentation do not trigger overlapping new swaps
 15. Optionally use `PrototypeSessionDriver -> Run Test Swap` to compare the debug path
+16. Optionally use additional `PrototypeSessionDriver` debug actions:
+   - `Rebuild Session`
+   - `Run Second Test Swap`
+   - `Run Test Swap Then Immediate Second Swap`
+   - `Log Presentation Bridge Summary`
 
 ---
 
@@ -342,11 +369,13 @@ The prototype interaction loop is now:
 7. `BoardView` compares current cell display state against the last rendered state and only redraws changed cells
 8. `BoardCellView` consumes that diff and applies lightweight per-cell transition feedback
 9. A presentation-planning layer decides which transition each changed cell should use
-10. `LevelSessionController` can choose whether a given refresh is presented immediately or as a thin resolved sequence
-11. For accepted swaps, `LevelSessionController` can also provide the resolved pair so the view can preview that exchange before showing the committed post-resolution state
-12. `BoardView` tracks when all animated cells in the current presentation pass have finished
-13. `HudPresenter` and `ResultsPresenter` can now be settled after that completion signal so UI closure better matches visible resolution timing
-14. `LevelSessionController` temporarily gates further board input during this settlement window so presentation passes do not overlap
+10. `BoardCellView` turns that transition into a lightweight ordered phase sequence such as preview, wait, apply-state, and follow-up feedback
+11. `LevelSessionController` can choose whether a given refresh is presented immediately or as a thin resolved sequence
+12. For accepted swaps, `LevelSessionController` can also provide the resolved pair so the view can preview that exchange before showing the committed post-resolution state
+13. `BoardView` tracks when all animated cells in the current presentation pass have finished
+14. `HudPresenter` and `ResultsPresenter` can now be settled after that completion signal so UI closure better matches visible resolution timing
+15. `LevelSessionController` temporarily gates further board input during this settlement window so presentation passes do not overlap
+16. `GameFlowController` can now represent this post-commit bridge explicitly as `Level Presentation Settling`
 
 That flow is a good example of how this framework separates:
 - scene input
@@ -363,9 +392,11 @@ These are expected at this stage:
 - swipe interaction is threshold-based, not polished gesture input yet
 - click-to-select is still the safest fallback path
 - there is now a thin animation bridge with light staggering, a separate resolved-sequence mode, a tiny swap preview, and a lightweight clear fade, but not a full staged swap / clear / fall timeline
-- board/UI timing is now event-aligned at a coarse presentation-pass level, but still not driven by explicit per-phase timeline objects
+- board/UI timing is now event-aligned at a coarse presentation-pass level, and cells now have a lightweight internal phase sequence, but the bridge is still not driven by a richer explicit board-wide timeline object
+- pass summaries now include board-level step plans as scaffolding, but those steps are still descriptive planning data rather than a standalone runtime sequencer
+- pass summaries now include board-level step plans as scaffolding, but those steps are still descriptive planning data rather than a standalone runtime sequencer
 - presentation planning is cleaner than before, but still not yet a full reusable timeline asset or standalone sequencer
-- input is protected during settlement, but there is not yet a distinct gameplay state for "presentation busy"
+- input is protected during settlement and flow can now represent that bridge explicitly, but there is still not yet a richer per-phase timeline state model
 - goal tracking is still very early and only partly representative
 - `ReleaseFrozenIngredient` is stubbed
 - `ClearJelly` is still placeholder-like in runtime terms
@@ -498,6 +529,61 @@ That pairing lets you see:
 - when the session considered the presentation pass "busy"
 - when UI settlement was allowed to finish
 
+If you need one level deeper of diagnosis, also enable:
+
+- `BoardView -> Log Presentation Lifecycle`
+
+That adds:
+
+- presentation pass start
+- whether the pass completed immediately or after animated cells settled
+- a clearer separation between "diff detected" and "presentation finished"
+- a quick summary of transition types used in that pass, such as `SelectionPulse`,
+  `TileChanged`, or `Refilled`
+- a quick summary of cell presentation phases used in that pass, such as
+  `SwapPreview`, `ApplyVisualState`, or `RefillDrop`
+
+### Useful PrototypeSessionDriver Actions
+
+These are the most useful Inspector-side debug actions for the current bridge:
+
+- `Rebuild Session`
+  Resets the board and logs the rebuilt state.
+- `Run Test Swap`
+  Runs the primary configured swap and logs whether it was accepted.
+- `Run Second Test Swap`
+  Runs an alternate configured swap so you can compare behaviors quickly.
+- `Run Test Swap Then Immediate Second Swap`
+  Specifically stress-tests whether accepted-swap settlement is blocking
+  overlapping follow-up input.
+- `Log Presentation Bridge Summary`
+  Prints current session readiness, settlement state, bridge timing settings,
+  the latest presentation pass summary, and the current board snapshot in one place.
+- `Log Last Presentation Pass`
+  Prints only the most recently recorded presentation-pass summary, which is useful when you want to inspect the bridge without the full board/session dump.
+- `Log Presentation History`
+  Prints the recent rolling history of presentation-pass summaries, which is useful when comparing several swaps or checking whether settlement behavior changed across attempts.
+  Recent entries now also include a simple label such as an initial build, selection refresh, or accepted-swap resolve.
+- `Log Compact Presentation History`
+  Prints the same recent history in a one-line-per-pass format, which is easier to scan during repeated validation loops.
+  Each line now also includes the approximate duration of that pass.
+- `Clear Presentation History`
+  Clears the remembered pass history so a new validation run starts from a clean slate.
+- `Log Last Pass Test Log Snippet`
+  Prints the most recent pass as a Markdown-ready observation snippet, so it can be pasted into the presentation test log with less manual rewriting.
+- `Run Presentation Validation Snapshot`
+  Prints a compact validation bundle in one go: current presentation settings, compact recent history, the latest Markdown-ready log snippet, and the current board snapshot.
+- `Run Validation Snapshot After Test Swap`
+  Clears presentation history, runs the primary configured test swap, and then prints the bundled validation snapshot for that run.
+- `Run Validation Snapshot After Second Test Swap`
+  Clears presentation history, runs the secondary configured test swap, and then prints the bundled validation snapshot for that run.
+- `Run Settlement Gate Validation Snapshot`
+  Clears presentation history, runs the overlapping-input stress check, and then prints a focused validation bundle for the settlement-gating path.
+- `Log Suggested Last Pass Test Log Snippet`
+  Prints a Markdown-ready test-log starter with a best-effort suggested test ID based on the latest pass label.
+- `Run Core Presentation Validation Suite`
+  Runs a small high-value validation loop for the current bridge: one primary swap pass and one settlement-gate pass, with history/snippet output for each.
+
 ---
 
 ## 10. Recommended Next Step After Wiring
@@ -511,3 +597,7 @@ That means:
 - preserving diff-based refresh ownership inside the view layer
 - evolving from per-cell diff feedback toward staged swap / clear / refill presentation without changing gameplay ownership
 - eventually separating "visual timeline steps" from "final committed board snapshot" more explicitly
+
+For live validation, use:
+
+- `production/presentation-bridge-test-log.md`

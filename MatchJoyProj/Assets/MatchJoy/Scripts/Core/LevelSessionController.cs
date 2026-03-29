@@ -27,6 +27,7 @@ namespace MatchJoy.Core
         private bool _isAwaitingPresentationSettlement;
 
         public BoardState BoardState => _boardState;
+        public bool IsAwaitingPresentationSettlement => _isAwaitingPresentationSettlement;
 
         private void Start()
         {
@@ -64,7 +65,7 @@ namespace MatchJoy.Core
             _boardState = BoardBuilder.Build(_levelDefinition);
             _moveCounter = new MoveCounter(_levelDefinition.MoveLimit);
             _goalTracker = new GoalTracker(_levelDefinition.Goals);
-            _boardView?.Render(_boardState);
+            _boardView?.Render(_boardState, BoardPresentationRenderRequest.Immediate(null, "Initial Session Build", BoardPresentationIntent.InitialBuild));
             _hudPresenter?.ShowMoves(_moveCounter.RemainingMoves);
             _resultsPresenter?.Hide();
             _gameFlowController.EnterLevelActive();
@@ -89,7 +90,7 @@ namespace MatchJoy.Core
             if (!result.Accepted)
             {
                 Debug.Log($"Rejected swap {source} -> {target}", this);
-                _boardView?.Render(_boardState);
+                _boardView?.Render(_boardState, BoardPresentationRenderRequest.Immediate(null, $"Rejected Swap Refresh {source} -> {target}", BoardPresentationIntent.RejectedSwapRefresh));
                 return false;
             }
 
@@ -97,8 +98,8 @@ namespace MatchJoy.Core
             var clearSummary = _cascadeResolver.Resolve(_boardState, result.MatchGroups);
             _goalTracker.RegisterAcceptedClear(clearSummary);
 
-            const BoardView.PresentationMode presentationMode = BoardView.PresentationMode.ResolvedSequence;
             _isAwaitingPresentationSettlement = true;
+            _gameFlowController?.EnterLevelPresentationSettling();
             if (_logPresentationSettlement)
             {
                 Debug.Log($"Board presentation settlement started for accepted swap {source} -> {target}.", this);
@@ -106,9 +107,7 @@ namespace MatchJoy.Core
 
             _boardView?.Render(
                 _boardState,
-                null,
-                presentationMode,
-                new BoardView.SwapPresentation(source, target));
+                BoardPresentationRenderRequest.ResolvedSwap(source, target, $"Accepted Swap Resolve {source} -> {target}", BoardPresentationIntent.AcceptedSwapResolve));
 
             Debug.Log($"Accepted swap {source} -> {target}, cleared {clearSummary.ClearedCellCount} cells", this);
             return true;
@@ -139,6 +138,10 @@ namespace MatchJoy.Core
                 _gameFlowController.ShowResults();
                 _resultsPresenter?.ShowFailure();
             }
+            else
+            {
+                _gameFlowController?.EnterLevelActive();
+            }
         }
 
         private void HandleBoardCellClicked(BoardCoordinate coordinate)
@@ -162,13 +165,23 @@ namespace MatchJoy.Core
                 }
 
                 _boardInputController.TrySelect(coordinate);
-                _boardView?.Render(_boardState, _boardInputController.SelectedCoordinate);
+                _boardView?.Render(
+                    _boardState,
+                    BoardPresentationRenderRequest.Immediate(
+                        _boardInputController.SelectedCoordinate,
+                        $"Selection Refresh {coordinate}",
+                        BoardPresentationIntent.SelectionRefresh));
                 return;
             }
 
             if (_boardInputController.TrySelect(coordinate))
             {
-                _boardView?.Render(_boardState, _boardInputController.SelectedCoordinate);
+                _boardView?.Render(
+                    _boardState,
+                    BoardPresentationRenderRequest.Immediate(
+                        _boardInputController.SelectedCoordinate,
+                        $"Selection Refresh {coordinate}",
+                        BoardPresentationIntent.SelectionRefresh));
             }
         }
 

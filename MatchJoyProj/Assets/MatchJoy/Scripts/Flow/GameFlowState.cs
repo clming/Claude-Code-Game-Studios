@@ -7,9 +7,10 @@
         ChapterMapActive = 2,
         LevelSessionSetup = 3,
         LevelActive = 4,
-        LevelPaused = 5,
-        ResultPresentation = 6,
-        RetryTransition = 7,
-        ReturnToMapTransition = 8,
+        LevelPresentationSettling = 5,
+        LevelPaused = 6,
+        ResultPresentation = 7,
+        RetryTransition = 8,
+        ReturnToMapTransition = 9,
     }
 }

@@ -56,6 +56,7 @@ what context they are in and what action comes next.
    - Chapter Map Active
    - Level Session Setup
    - Level Active
+   - Level Presentation Settling
    - Level Paused
    - Result Presentation
    - Retry Transition
@@ -81,26 +82,30 @@ what context they are in and what action comes next.
 9. Level Paused suspends ordinary gameplay interaction without destroying the
    current runtime session state.
 
-10. Result Presentation may begin only after an authoritative terminal outcome
+10. Level Presentation Settling is the short post-commit state in which gameplay
+    truth has already been resolved, but the view layer is still presenting the
+    committed board/result sequence before normal input or result hand-off.
+
+11. Result Presentation may begin only after an authoritative terminal outcome
     has been committed by gameplay truth.
 
-11. Retry Transition always rebuilds a level from authored state in MVP. It does
+12. Retry Transition always rebuilds a level from authored state in MVP. It does
     not resume partially completed transient board state.
 
-12. Return-to-Map Transition exits the current session/result context and hands
+13. Return-to-Map Transition exits the current session/result context and hands
     control back to chapter map flow.
 
-13. Systems that depend on active gameplay truth must be gated by flow state. If
+14. Systems that depend on active gameplay truth must be gated by flow state. If
     the top-level state is not compatible with their role, they must remain
     inactive, suspended, or read-only as appropriate.
 
-14. Top-level transitions must be explicit and deterministic. The same trigger in
+15. Top-level transitions must be explicit and deterministic. The same trigger in
     the same valid source state should always route to the same target state.
 
-15. Invalid transitions must fail safely in development builds and must not leave
+16. Invalid transitions must fail safely in development builds and must not leave
     the game in a half-switched global state.
 
-16. This system must remain scope-conscious for the sample. MVP flow does not
+17. This system must remain scope-conscious for the sample. MVP flow does not
     need live-ops inbox states, social invite states, store flows, or background
     match restoration.
 
@@ -115,6 +120,7 @@ The flow system owns the major runtime states below.
 | Chapter Map Active | Shell/map routing enters chapter map context | Player launches a level or exits map context | Campaign node interaction is legal and map progression state is visible |
 | Level Session Setup | An unlocked level launch is accepted | Session data is built successfully or setup fails safely | Builds a fresh runtime session from authored data and initializes gameplay-facing systems |
 | Level Active | Level session setup completes successfully or pause is resumed | Pause, terminal outcome, or forced exit occurs | Normal gameplay interaction and runtime puzzle simulation are active |
+| Level Presentation Settling | A committed accepted-swap resolution or similar post-commit presentation sequence begins | Presentation sequence completes or a terminal result hand-off occurs | Gameplay truth is already committed, but ordinary board input remains blocked while view-side presentation catches up |
 | Level Paused | Pause is requested during Level Active | Resume, retry request, or exit request occurs | Gameplay interaction is suspended and session state is preserved |
 | Result Presentation | Terminal win/loss outcome is committed and result UI is opened | Retry, next action, or return-to-map is chosen | Displays authoritative session outcome and available next actions |
 | Retry Transition | Retry is requested from pause or results flow | Fresh session setup begins | Tears down transient session state and requests a clean rebuild of the same level |
@@ -128,18 +134,26 @@ State transition rules:
    unlocked level node.
 4. `Level Session Setup -> Level Active` when gameplay session construction is
    complete and input-safe state is ready.
-5. `Level Active -> Level Paused` when pause is requested.
-6. `Level Paused -> Level Active` when resume is accepted.
-7. `Level Active -> Result Presentation` when committed win/loss truth exists and
+5. `Level Active -> Level Presentation Settling` when committed gameplay truth
+   has changed and the board is presenting that change before returning control.
+6. `Level Presentation Settling -> Level Active` when the current presentation
+   sequence completes and no terminal outcome hand-off is needed.
+7. `Level Active -> Level Paused` when pause is requested.
+8. `Level Presentation Settling -> LevelPaused` only if pause support is later
+   extended to settle-safe boundaries; MVP may keep this path limited.
+9. `Level Paused -> Level Active` when resume is accepted.
+10. `Level Presentation Settling -> Result Presentation` when committed win/loss
+    truth exists and presentation hand-off completes.
+11. `Level Active -> Result Presentation` when committed win/loss truth exists and
    result flow is opened.
-8. `Level Paused -> Retry Transition` when retry is requested from pause flow.
-9. `Result Presentation -> Retry Transition` when retry/replay is requested.
-10. `Retry Transition -> Level Session Setup` when fresh session rebuild begins.
-11. `Result Presentation -> Return-to-Map Transition` when the player chooses to
+12. `Level Paused -> Retry Transition` when retry is requested from pause flow.
+13. `Result Presentation -> Retry Transition` when retry/replay is requested.
+14. `Retry Transition -> Level Session Setup` when fresh session rebuild begins.
+15. `ResultPresentation -> Return-to-Map Transition` when the player chooses to
     leave the current result context.
-12. `Level Paused -> Return-to-Map Transition` when the player abandons the
+16. `LevelPaused -> Return-to-Map Transition` when the player abandons the
     current session back to map.
-13. `Return-to-Map Transition -> Chapter Map Active` when chapter map context is
+17. `Return-to-Map Transition -> Chapter Map Active` when chapter map context is
     ready to resume.
 
 ### Interactions with Other Systems

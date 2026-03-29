@@ -34,7 +34,7 @@ namespace MatchJoy.UI
             _clearPreviewDuration = clearPreviewDuration;
         }
 
-        public BoardCellView.RefreshTransition BuildTransition(
+        public BoardCellPresentationInstruction BuildInstruction(
             BoardState board,
             BoardCoordinate coordinate,
             bool hasPreviousSnapshot,
@@ -44,60 +44,68 @@ namespace MatchJoy.UI
             bool nextIsOccupied,
             int nextTileId,
             bool nextIsSelected,
-            BoardView.PresentationMode presentationMode,
-            BoardView.SwapPresentation? swapPresentation)
+            BoardPresentationRenderRequest request)
         {
             if (!hasPreviousSnapshot)
             {
-                var populateDelay = presentationMode == BoardView.PresentationMode.ResolvedSequence
+                var populateDelay = request.PresentationMode == BoardView.PresentationMode.ResolvedSequence
                     ? (coordinate.Y * board.Width + coordinate.X) * _initialPopulateStepDelay
                     : 0f;
-                return new BoardCellView.RefreshTransition(
-                    BoardCellView.RefreshTransitionType.InitialPopulate,
-                    populateDelay > 0f,
-                    populateDelay);
+                return CreateInstruction(
+                    new BoardCellView.RefreshTransition(
+                        BoardCellView.RefreshTransitionType.InitialPopulate,
+                        populateDelay > 0f,
+                        populateDelay),
+                    nextIsOccupied,
+                    request);
             }
 
             if (previousIsSelected != nextIsSelected)
             {
-                return new BoardCellView.RefreshTransition(BoardCellView.RefreshTransitionType.SelectionPulse, false);
+                return CreateInstruction(
+                    new BoardCellView.RefreshTransition(BoardCellView.RefreshTransitionType.SelectionPulse, false),
+                    nextIsOccupied,
+                    request);
             }
 
             if (!previousIsOccupied && nextIsOccupied)
             {
-                var refillDelay = presentationMode == BoardView.PresentationMode.ResolvedSequence
+                var refillDelay = request.PresentationMode == BoardView.PresentationMode.ResolvedSequence
                     ? (board.Height - 1 - coordinate.Y) * _refillRowStepDelay
                     : 0f;
-                var refillOffset = presentationMode == BoardView.PresentationMode.ResolvedSequence
+                var refillOffset = request.PresentationMode == BoardView.PresentationMode.ResolvedSequence
                     ? new Vector2(0f, _cellSize.y * _refillSpawnOffsetCells)
                     : Vector2.zero;
-                return new BoardCellView.RefreshTransition(
-                    BoardCellView.RefreshTransitionType.Refilled,
-                    presentationMode == BoardView.PresentationMode.ResolvedSequence,
-                    refillDelay,
-                    refillOffset);
+                return CreateInstruction(
+                    new BoardCellView.RefreshTransition(
+                        BoardCellView.RefreshTransitionType.Refilled,
+                        request.PresentationMode == BoardView.PresentationMode.ResolvedSequence,
+                        refillDelay,
+                        refillOffset),
+                    nextIsOccupied,
+                    request);
             }
 
             if (previousTileId != nextTileId || previousIsOccupied != nextIsOccupied)
             {
                 var distanceFromCenter = Mathf.Abs(coordinate.X - ((board.Width - 1) * 0.5f));
-                var waveDelay = presentationMode == BoardView.PresentationMode.ResolvedSequence
+                var waveDelay = request.PresentationMode == BoardView.PresentationMode.ResolvedSequence
                     ? distanceFromCenter * _tileChangeWaveStepDelay
                     : 0f;
                 var preApplyOffset = Vector2.zero;
                 var preApplyDuration = 0f;
                 var preApplyEffectType = BoardCellView.PreApplyEffectType.None;
 
-                if (presentationMode == BoardView.PresentationMode.ResolvedSequence
-                    && swapPresentation.HasValue
-                    && TryBuildSwapPreviewOffset(coordinate, swapPresentation.Value, out var swapOffset))
+                if (request.PresentationMode == BoardView.PresentationMode.ResolvedSequence
+                    && request.SwapPresentation.HasValue
+                    && TryBuildSwapPreviewOffset(coordinate, request.SwapPresentation.Value, out var swapOffset))
                 {
                     preApplyOffset = swapOffset;
                     preApplyDuration = _swapPreviewDuration;
                     preApplyEffectType = BoardCellView.PreApplyEffectType.SwapPreview;
                 }
 
-                if (presentationMode == BoardView.PresentationMode.ResolvedSequence
+                if (request.PresentationMode == BoardView.PresentationMode.ResolvedSequence
                     && preApplyEffectType == BoardCellView.PreApplyEffectType.None
                     && previousIsOccupied)
                 {
@@ -105,17 +113,23 @@ namespace MatchJoy.UI
                     preApplyEffectType = BoardCellView.PreApplyEffectType.ClearFade;
                 }
 
-                return new BoardCellView.RefreshTransition(
-                    BoardCellView.RefreshTransitionType.TileChanged,
-                    presentationMode == BoardView.PresentationMode.ResolvedSequence,
-                    waveDelay,
-                    Vector2.zero,
-                    preApplyOffset,
-                    preApplyDuration,
-                    preApplyEffectType);
+                return CreateInstruction(
+                    new BoardCellView.RefreshTransition(
+                        BoardCellView.RefreshTransitionType.TileChanged,
+                        request.PresentationMode == BoardView.PresentationMode.ResolvedSequence,
+                        waveDelay,
+                        Vector2.zero,
+                        preApplyOffset,
+                        preApplyDuration,
+                        preApplyEffectType),
+                    nextIsOccupied,
+                    request);
             }
 
-            return new BoardCellView.RefreshTransition(BoardCellView.RefreshTransitionType.None, false);
+            return CreateInstruction(
+                new BoardCellView.RefreshTransition(BoardCellView.RefreshTransitionType.None, false),
+                nextIsOccupied,
+                request);
         }
 
         private bool TryBuildSwapPreviewOffset(BoardCoordinate coordinate, BoardView.SwapPresentation swapPresentation, out Vector2 previewOffset)
@@ -144,6 +158,15 @@ namespace MatchJoy.UI
             return new Vector2(
                 dx * _cellSize.x * _swapPreviewOffsetCells,
                 dy * _cellSize.y * _swapPreviewOffsetCells);
+        }
+
+        private static BoardCellPresentationInstruction CreateInstruction(
+            BoardCellView.RefreshTransition transition,
+            bool nextIsOccupied,
+            BoardPresentationRenderRequest request)
+        {
+            var phases = BoardCellView.BuildPresentationPhases(transition, nextIsOccupied);
+            return new BoardCellPresentationInstruction(transition, request.PresentationIntent, request.PresentationStage, phases);
         }
     }
 }
