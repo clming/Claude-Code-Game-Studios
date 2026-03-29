@@ -1,7 +1,7 @@
 ﻿# MatchJoy Scene Wiring Guide
 
 > **Status**: Draft
-> **Last Updated**: 2026-03-28
+> **Last Updated**: 2026-03-29
 > **Purpose**: Help wire the current Sprint 1 prototype scripts into a working Unity scene step by step.
 
 ---
@@ -17,6 +17,7 @@ At the end of this setup, you should have one Unity scene that can:
 - show a simple result panel through `ResultsPresenter`
 - let you click a first cell, click an adjacent second cell, and attempt a real swap
 - let you drag or swipe from one cell toward a neighbor to attempt a direct swap
+- refresh only the cells whose visible state changed after interaction
 - optionally still run a debug swap from `PrototypeSessionDriver`
 
 This is not the final scene architecture. It is the thinnest useful scene wiring
@@ -173,6 +174,9 @@ Add component:
 
 Give it a `RectTransform`.
 
+Optional debug recommendation:
+- enable `Log Diff Refreshes` if you want to study how many cells the view updates after each interaction
+
 ### CellRoot
 
 Create child object under `BoardView`:
@@ -281,11 +285,12 @@ After wiring, test in this order:
 5. Click an adjacent cell and watch the swap attempt resolve
 6. Press Play again and drag from one cell toward a neighboring cell
 7. Confirm the swipe path also attempts a swap
-8. Watch Console logs:
+8. If `Log Diff Refreshes` is enabled, observe how many cells were updated after each interaction
+9. Watch Console logs:
    - rejected swap logs should appear for bad swaps
    - accepted swap logs should show cleared count
-9. Confirm the board re-renders after the click-driven or swipe-driven swap
-10. Optionally use `PrototypeSessionDriver -> Run Test Swap` to compare the debug path
+10. Confirm the board refreshes only changed cells instead of blindly repainting every cell
+11. Optionally use `PrototypeSessionDriver -> Run Test Swap` to compare the debug path
 
 ---
 
@@ -305,7 +310,8 @@ The prototype interaction loop is now:
 4. `BoardInputController` owns the lightweight selection state for the click path
 5. `SwapResolutionService` validates the swap
 6. `CascadeResolver` clears/refills if accepted
-7. `HudPresenter` and `ResultsPresenter` update after the state change
+7. `BoardView` compares current cell display state against the last rendered state and only redraws changed cells
+8. `HudPresenter` and `ResultsPresenter` update after the state change
 
 That flow is a good example of how this framework separates:
 - scene input
@@ -326,7 +332,7 @@ These are expected at this stage:
 - `ReleaseFrozenIngredient` is stubbed
 - `ClearJelly` is still placeholder-like in runtime terms
 - result presentation is very thin
-- the board is re-rendered whole after each swap instead of animating diffs
+- diff refresh reduces redraw churn, but there is still no tweened swap / clear / refill presentation
 
 This is okay. The point of this scene is to verify the architecture path, not to
 look production-ready yet.
@@ -337,9 +343,9 @@ look production-ready yet.
 
 Once this scene is wired and visibly works, the next best implementation step is:
 
-- build the `board animation + diff refresh bridge`
+- build the `board animation bridge`
 
 That means:
 - keeping the current input path intact
-- replacing full board redraw behavior with targeted visual updates
+- preserving diff-based refresh ownership inside the view layer
 - introducing simple swap / clear / refill presentation without changing gameplay ownership

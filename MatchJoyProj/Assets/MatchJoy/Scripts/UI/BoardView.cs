@@ -7,12 +7,30 @@ namespace MatchJoy.UI
 {
     public sealed class BoardView : MonoBehaviour
     {
+        private readonly struct CellRenderSnapshot
+        {
+            public CellRenderSnapshot(bool isPlayable, bool isOccupied, int tileId, bool isSelected)
+            {
+                IsPlayable = isPlayable;
+                IsOccupied = isOccupied;
+                TileId = tileId;
+                IsSelected = isSelected;
+            }
+
+            public bool IsPlayable { get; }
+            public bool IsOccupied { get; }
+            public int TileId { get; }
+            public bool IsSelected { get; }
+        }
+
         [SerializeField] private RectTransform _cellRoot;
         [SerializeField] private BoardCellView _cellTemplate;
         [SerializeField] private Vector2 _cellSize = new(72f, 72f);
         [SerializeField] private Vector2 _cellSpacing = new(6f, 6f);
+        [SerializeField] private bool _logDiffRefreshes;
 
         private readonly Dictionary<(int X, int Y), BoardCellView> _spawnedCells = new();
+        private readonly Dictionary<(int X, int Y), CellRenderSnapshot> _lastRenderedStates = new();
 
         public event Action<BoardCoordinate> CellClicked;
         public event Action<BoardCoordinate, BoardCoordinate> SwipeRequested;
@@ -26,6 +44,7 @@ namespace MatchJoy.UI
 
             EnsureGrid(board);
 
+            var updatedCellCount = 0;
             foreach (var cell in board.GetAllCells())
             {
                 if (_spawnedCells.TryGetValue((cell.Coordinate.X, cell.Coordinate.Y), out var view))
@@ -33,8 +52,23 @@ namespace MatchJoy.UI
                     var isSelected = selectedCoordinate.HasValue
                         && selectedCoordinate.Value.X == cell.Coordinate.X
                         && selectedCoordinate.Value.Y == cell.Coordinate.Y;
+                    var nextSnapshot = new CellRenderSnapshot(cell.IsPlayable, cell.IsOccupied, cell.TileId, isSelected);
+
+                    if (_lastRenderedStates.TryGetValue((cell.Coordinate.X, cell.Coordinate.Y), out var previousSnapshot)
+                        && previousSnapshot.Equals(nextSnapshot))
+                    {
+                        continue;
+                    }
+
                     view.Render(cell.IsPlayable, cell.IsOccupied, cell.TileId, isSelected);
+                    _lastRenderedStates[(cell.Coordinate.X, cell.Coordinate.Y)] = nextSnapshot;
+                    updatedCellCount++;
                 }
+            }
+
+            if (_logDiffRefreshes)
+            {
+                Debug.Log($"BoardView diff refresh updated {updatedCellCount} cells.", this);
             }
         }
 
