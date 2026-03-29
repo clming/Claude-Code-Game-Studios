@@ -13,6 +13,8 @@ namespace MatchJoy.Core
         [SerializeField] private GameFlowController _gameFlowController;
         [SerializeField] private LevelDefinition _levelDefinition;
         [SerializeField] private HudPresenter _hudPresenter;
+        [SerializeField] private ResultsPresenter _resultsPresenter;
+        [SerializeField] private BoardView _boardView;
         [SerializeField] private BoardInputController _boardInputController;
 
         private readonly SwapResolutionService _swapResolutionService = new();
@@ -32,7 +34,22 @@ namespace MatchJoy.Core
                 return;
             }
 
+            if (_boardView != null)
+            {
+                _boardView.CellClicked += HandleBoardCellClicked;
+                _boardView.SwipeRequested += HandleBoardSwipeRequested;
+            }
+
             BuildSession();
+        }
+
+        private void OnDestroy()
+        {
+            if (_boardView != null)
+            {
+                _boardView.CellClicked -= HandleBoardCellClicked;
+                _boardView.SwipeRequested -= HandleBoardSwipeRequested;
+            }
         }
 
         public void BuildSession()
@@ -41,7 +58,9 @@ namespace MatchJoy.Core
             _boardState = BoardBuilder.Build(_levelDefinition);
             _moveCounter = new MoveCounter(_levelDefinition.MoveLimit);
             _goalTracker = new GoalTracker(_levelDefinition.Goals);
+            _boardView?.Render(_boardState);
             _hudPresenter?.ShowMoves(_moveCounter.RemainingMoves);
+            _resultsPresenter?.Hide();
             _gameFlowController.EnterLevelActive();
         }
 
@@ -56,25 +75,66 @@ namespace MatchJoy.Core
             if (!result.Accepted)
             {
                 Debug.Log($"Rejected swap {source} -> {target}", this);
+                _boardView?.Render(_boardState);
                 return false;
             }
 
             _moveCounter.ConsumeAcceptedMove();
-            var clearedCount = _cascadeResolver.Resolve(_boardState, result.MatchGroups);
-            _goalTracker.RegisterAcceptedClear(clearedCount);
+            var clearSummary = _cascadeResolver.Resolve(_boardState, result.MatchGroups);
+            _goalTracker.RegisterAcceptedClear(clearSummary);
+            _boardView?.Render(_boardState);
             _hudPresenter?.ShowMoves(_moveCounter.RemainingMoves);
 
             if (_goalTracker.AreAllGoalsComplete())
             {
                 _gameFlowController.ShowResults();
+                _resultsPresenter?.ShowVictory(_moveCounter.RemainingMoves);
             }
             else if (_moveCounter.RemainingMoves <= 0)
             {
                 _gameFlowController.ShowResults();
+                _resultsPresenter?.ShowFailure();
             }
 
-            Debug.Log($"Accepted swap {source} -> {target}, cleared {clearedCount} cells", this);
+            Debug.Log($"Accepted swap {source} -> {target}, cleared {clearSummary.ClearedCellCount} cells", this);
             return true;
+        }
+
+        private void HandleBoardCellClicked(BoardCoordinate coordinate)
+        {
+            if (_boardInputController == null || _boardState == null)
+            {
+                return;
+            }
+
+            if (_boardInputController.HasSelection)
+            {
+                if (_boardInputController.TryBuildSwap(coordinate, out var request))
+                {
+                    TryHandleSwap(request.Source, request.Target);
+                    _boardView?.Render(_boardState);
+                    return;
+                }
+
+                _boardInputController.TrySelect(coordinate);
+                _boardView?.Render(_boardState, _boardInputController.SelectedCoordinate);
+                return;
+            }
+
+            if (_boardInputController.TrySelect(coordinate))
+            {
+                _boardView?.Render(_boardState, _boardInputController.SelectedCoordinate);
+            }
+        }
+
+        private void HandleBoardSwipeRequested(BoardCoordinate source, BoardCoordinate target)
+        {
+            if (_boardState == null)
+            {
+                return;
+            }
+
+            TryHandleSwap(source, target);
         }
     }
 }

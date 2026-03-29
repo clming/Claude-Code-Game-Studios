@@ -1,12 +1,15 @@
 ﻿using System.Collections.Generic;
+using MatchJoy.Goals;
 
 namespace MatchJoy.Board
 {
     public sealed class CascadeResolver
     {
-        public int Resolve(BoardState board, IReadOnlyList<MatchGroup> matchGroups)
+        public ClearResolutionSummary Resolve(BoardState board, IReadOnlyList<MatchGroup> matchGroups)
         {
             var uniqueCoordinates = new HashSet<(int X, int Y)>();
+            var clearedTileCounts = new Dictionary<int, int>();
+
             foreach (var group in matchGroups)
             {
                 foreach (var coordinate in group.Coordinates)
@@ -19,13 +22,23 @@ namespace MatchJoy.Board
             {
                 if (board.TryGetCell(new BoardCoordinate(coordinate.X, coordinate.Y), out var cell))
                 {
+                    if (cell.IsOccupied)
+                    {
+                        if (!clearedTileCounts.ContainsKey(cell.TileId))
+                        {
+                            clearedTileCounts[cell.TileId] = 0;
+                        }
+
+                        clearedTileCounts[cell.TileId]++;
+                    }
+
                     cell.SetEmpty();
                 }
             }
 
             ApplyGravity(board);
             Refill(board);
-            return uniqueCoordinates.Count;
+            return new ClearResolutionSummary(uniqueCoordinates.Count, clearedTileCounts);
         }
 
         private static void ApplyGravity(BoardState board)

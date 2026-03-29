@@ -10,6 +10,9 @@ namespace MatchJoy.Input
 
         private readonly TileSelectionState _selectionState = new();
 
+        public bool HasSelection => _selectionState.HasSelection;
+        public BoardCoordinate SelectedCoordinate => _selectionState.SelectedCoordinate;
+
         public bool TrySelect(BoardCoordinate coordinate)
         {
             if (_gameFlowController == null || !_gameFlowController.IsGameplayInputAllowed())

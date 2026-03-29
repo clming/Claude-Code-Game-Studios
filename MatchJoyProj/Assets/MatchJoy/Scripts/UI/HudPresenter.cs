@@ -1,11 +1,11 @@
-﻿using TMPro;
-using UnityEngine;
+﻿using UnityEngine;
+using UnityEngine.UI;
 
 namespace MatchJoy.UI
 {
     public sealed class HudPresenter : MonoBehaviour
     {
-        [SerializeField] private TMP_Text _movesLabel;
+        [SerializeField] private Text _movesLabel;
 
         public void ShowMoves(int remainingMoves)
         {
