@@ -281,3 +281,78 @@ For MatchJoy / Jelly Candy Workshop, the next correct step is:
 @design/ui/matchjoy-board-hifi-design-spec-v1.md
 
 @design/ui/matchjoy-results-hifi-design-spec-v1.md
+
+## Figma Execution Docs
+
+@design/ui/matchjoy-figma-production-checklist-v1.md
+
+@design/ui/matchjoy-figma-naming-and-export-spec-v1.md
+
+## Screen Draw Guides
+
+@design/ui/matchjoy-inlevel-screen-draw-guide-v1.md
+
+@design/ui/matchjoy-results-win-screen-draw-guide-v1.md
+
+@design/ui/matchjoy-results-fail-screen-draw-guide-v1.md
+
+## Visual Tokens
+
+@design/ui/matchjoy-visual-tokens-spec-v1.md
+
+## Component System Docs
+
+@design/ui/matchjoy-component-inventory-spec-v1.md
+
+@design/ui/matchjoy-component-variants-spec-v1.md
+
+## Asset Production Docs
+
+@design/ui/matchjoy-asset-production-list-v1.md
+
+@design/ui/matchjoy-asset-export-matrix-v1.md
+
+## Motion And FX Docs
+
+@design/ui/matchjoy-motion-spec-v1.md
+
+@design/ui/matchjoy-fx-spec-v1.md
+
+## Milestone Deliverables
+
+@design/ui/matchjoy-ui-art-milestone-deliverables-v1.md
+
+## Figma Structure Templates
+
+@design/ui/matchjoy-figma-page-template-spec-v1.md
+
+@design/ui/matchjoy-figma-initial-frame-checklist-v1.md
+
+## Directory Guide
+
+@design/ui/ui-art-directory-guide.md
+
+## Asset Batch Execution Docs
+
+@design/ui/matchjoy-ui-asset-batch-plan-v1.md
+
+@design/ui/matchjoy-ui-asset-start-order-v1.md
+
+## Production Sprint Docs
+
+@design/ui/matchjoy-ui-art-production-sprint-v1.md
+
+
+## Screen Build Briefs
+
+@design/ui/matchjoy-inlevel-hifi-build-brief-v1.md
+
+@design/ui/matchjoy-results-win-hifi-build-brief-v1.md
+
+@design/ui/matchjoy-results-fail-hifi-build-brief-v1.md
+
+
+## Review Pack Docs
+
+@design/ui/matchjoy-screen-review-pack-spec-v1.md
+
