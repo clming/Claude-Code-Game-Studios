@@ -45,6 +45,58 @@ See `docs/COLLABORATIVE-DESIGN-PRINCIPLE.md` for full protocol and examples.
 > **First session?** If the project has no engine configured and no game concept,
 > run `/start` to begin the guided onboarding flow.
 
+## UI Workflow Priority
+
+### Hard Rule
+
+For game projects, `UI art design` must come before `UI code implementation`.
+
+Required order:
+
+1. Core gameplay and code foundation stabilize.
+2. UI art design begins and a first-round visual direction is approved.
+3. Component design, art specs, and motion direction are defined.
+4. Only then should UI code implementation and asset integration proceed.
+
+Default anti-patterns to avoid:
+
+- Expanding placeholder procedural UI into de facto final UI.
+- Treating plain-color debug panels and text-only layouts as final direction.
+- Continuing large-scale HUD/Board/Results coding after the visual phase should have started.
+
+### Allowed Use of Procedural Placeholder UI
+
+Procedural placeholder UI is only acceptable to:
+
+- validate information hierarchy,
+- validate interaction timing,
+- validate gameplay-to-presentation flow.
+
+Once those are stable, the workflow must switch to:
+
+- UI art design,
+- visual direction approval,
+- asset specification,
+- then UI engineering and integration.
+
+### Default Agent Behavior
+
+When the project reaches the UI phase, agents should default to:
+
+1. producing the UI art workflow,
+2. producing a visual direction document,
+3. documenting tools, references, and deliverables,
+4. then moving into Figma/design production,
+5. and only after that implementing UI in Unity.
+
+If the user has not explicitly asked to keep writing UI code, agents should not skip the UI art phase.
+
+## UI Design Entry Docs
+
+@design/ui/ui-art-design-workflow.md
+
+@design/ui/matchjoy-ui-art-direction-v1.md
+
 ## Coding Standards
 
 @.claude/docs/coding-standards.md

@@ -12,6 +12,7 @@ namespace MatchJoy.UI
             BoardPresentationIntent intent,
             BoardPresentationStage stage,
             IReadOnlyList<BoardPresentationStep> steps,
+            float estimatedDurationSeconds,
             int updatedCellCount,
             int animatedCellCount,
             bool completedImmediately,
@@ -25,6 +26,7 @@ namespace MatchJoy.UI
             Intent = intent;
             Stage = stage;
             Steps = steps;
+            EstimatedDurationSeconds = estimatedDurationSeconds;
             UpdatedCellCount = updatedCellCount;
             AnimatedCellCount = animatedCellCount;
             CompletedImmediately = completedImmediately;
@@ -39,6 +41,7 @@ namespace MatchJoy.UI
         public BoardPresentationIntent Intent { get; }
         public BoardPresentationStage Stage { get; }
         public IReadOnlyList<BoardPresentationStep> Steps { get; }
+        public float EstimatedDurationSeconds { get; }
         public int UpdatedCellCount { get; }
         public int AnimatedCellCount { get; }
         public bool CompletedImmediately { get; }
@@ -56,6 +59,7 @@ namespace MatchJoy.UI
             builder.AppendLine($"- Intent: {Intent}");
             builder.AppendLine($"- Stage: {Stage}");
             builder.AppendLine($"- Steps: {BuildStepSummary(Steps)}");
+            builder.AppendLine($"- Estimated Duration Seconds: {EstimatedDurationSeconds:F3}");
             builder.AppendLine($"- Updated Cells: {UpdatedCellCount}");
             builder.AppendLine($"- Animated Cells: {AnimatedCellCount}");
             builder.AppendLine($"- Completed Immediately: {CompletedImmediately}");
@@ -67,7 +71,7 @@ namespace MatchJoy.UI
 
         public string BuildCompactDebugString()
         {
-            return $"#{Token} [{Label}] Intent={Intent}, Stage={Stage}, Steps={BuildStepSummary(Steps)}, Mode={Mode}, Updated={UpdatedCellCount}, Animated={AnimatedCellCount}, Settled={CompletedImmediately}, Duration={DurationSeconds:F3}s, Transitions={BuildCountSummary(TransitionCounts)}, Phases={BuildCountSummary(PhaseCounts)}";
+            return $"#{Token} [{Label}] Intent={Intent}, Stage={Stage}, Steps={BuildStepSummary(Steps)}, Mode={Mode}, Updated={UpdatedCellCount}, Animated={AnimatedCellCount}, Estimated={EstimatedDurationSeconds:F3}s, Settled={CompletedImmediately}, Duration={DurationSeconds:F3}s, Transitions={BuildCountSummary(TransitionCounts)}, Phases={BuildCountSummary(PhaseCounts)}";
         }
 
         public string BuildTestLogSnippet(string testId = "PB-XX", string title = "Presentation Observation")
@@ -79,6 +83,7 @@ namespace MatchJoy.UI
             builder.AppendLine($"- Expected: ");
             builder.AppendLine($"- Actual: Pass #{Token} ran in stage `{Stage}` with mode `{Mode}` and settled in approximately `{DurationSeconds:F3}s`.");
             builder.AppendLine($"- Board steps: `{BuildStepSummary(Steps)}`");
+            builder.AppendLine($"- Planned cadence: approximately `{EstimatedDurationSeconds:F3}s`.");
             builder.AppendLine($"- Repro frequency: ");
             builder.AppendLine($"- Console evidence: `Updated={UpdatedCellCount}`, `Animated={AnimatedCellCount}`, `Transitions={BuildCountSummary(TransitionCounts)}`, `Phases={BuildCountSummary(PhaseCounts)}`");
             builder.AppendLine($"- Most likely layer: ");
@@ -112,7 +117,7 @@ namespace MatchJoy.UI
             var parts = new List<string>();
             for (var i = 0; i < steps.Count; i++)
             {
-                parts.Add($"{steps[i].Type}({steps[i].Reason},{steps[i].CompletionMode})");
+                parts.Add($"#{steps[i].SequenceIndex}:{steps[i].Type}({steps[i].Reason},{steps[i].CompletionMode},{steps[i].ExpectedDurationSeconds:F2}s)");
             }
 
             return string.Join(" -> ", parts);

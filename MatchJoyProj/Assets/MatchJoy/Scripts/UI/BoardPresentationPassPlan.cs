@@ -4,13 +4,16 @@ namespace MatchJoy.UI
     {
         public BoardPresentationPassPlan(
             BoardPresentationStage stage,
-            IReadOnlyList<BoardPresentationStep> steps)
+            IReadOnlyList<BoardPresentationStep> steps,
+            float estimatedDurationSeconds)
         {
             Stage = stage;
             Steps = steps;
+            EstimatedDurationSeconds = estimatedDurationSeconds;
         }
 
         public BoardPresentationStage Stage { get; }
         public IReadOnlyList<BoardPresentationStep> Steps { get; }
+        public float EstimatedDurationSeconds { get; }
     }
 }

@@ -4,84 +4,151 @@ namespace MatchJoy.UI
 {
     public sealed class BoardPresentationPassPlanner
     {
+        private const float ShortStepDurationSeconds = 0.10f;
+        private const float ResolveStepDurationSeconds = 0.12f;
+        private const float AwaitSettleDurationSeconds = 0.18f;
+
         public BoardPresentationPassPlan BuildPlan(BoardPresentationPassPlanningContext context)
         {
-            var steps = new List<BoardPresentationStep>
-            {
-                new(BoardPresentationStepType.Prepare, "Prepare pass", BoardPresentationStepReason.PassStart)
-            };
+            var steps = new List<BoardPresentationStep>();
+            var nextSequenceIndex = 0;
+
+            AddStep(
+                steps,
+                ref nextSequenceIndex,
+                BoardPresentationStepType.Prepare,
+                "Prepare pass",
+                BoardPresentationStepReason.PassStart);
 
             switch (context.Stage)
             {
                 case BoardPresentationStage.InitialBuild:
-                    steps.Add(new BoardPresentationStep(
+                    AddStep(
+                        steps,
+                        ref nextSequenceIndex,
                         BoardPresentationStepType.ResolveChanges,
                         "Populate initial board",
-                        BoardPresentationStepReason.InitialPopulation));
+                        BoardPresentationStepReason.InitialPopulation,
+                        BoardPresentationStepCompletionMode.Immediate,
+                        ResolveStepDurationSeconds);
                     break;
                 case BoardPresentationStage.InteractionRefresh:
-                    steps.Add(new BoardPresentationStep(
+                    AddStep(
+                        steps,
+                        ref nextSequenceIndex,
                         BoardPresentationStepType.InteractionRefresh,
                         context.Intent == BoardPresentationIntent.RejectedSwapRefresh
                             ? "Refresh rejected swap state"
                             : "Refresh interaction state",
                         context.Intent == BoardPresentationIntent.RejectedSwapRefresh
                             ? BoardPresentationStepReason.RejectedSwapFeedback
-                            : BoardPresentationStepReason.InteractionSelection));
+                            : BoardPresentationStepReason.InteractionSelection,
+                        BoardPresentationStepCompletionMode.Immediate,
+                        ShortStepDurationSeconds);
                     break;
                 case BoardPresentationStage.SwapResolution:
                     if (context.Mode == BoardView.PresentationMode.ResolvedSequence)
                     {
-                        steps.Add(new BoardPresentationStep(
+                        AddStep(
+                            steps,
+                            ref nextSequenceIndex,
                             BoardPresentationStepType.InteractionRefresh,
                             "Lock into resolved sequence",
-                            BoardPresentationStepReason.ResolvedSequenceEntry));
+                            BoardPresentationStepReason.ResolvedSequenceEntry,
+                            BoardPresentationStepCompletionMode.Immediate,
+                            ShortStepDurationSeconds);
                     }
 
                     if (HasPhase(context.PhaseCounts, BoardCellPresentationPhaseType.SwapPreview))
                     {
-                        steps.Add(new BoardPresentationStep(
+                        AddStep(
+                            steps,
+                            ref nextSequenceIndex,
                             BoardPresentationStepType.SwapPreview,
                             "Preview accepted swap",
-                            BoardPresentationStepReason.SwapPreview));
+                            BoardPresentationStepReason.SwapPreview,
+                            BoardPresentationStepCompletionMode.Immediate,
+                            ShortStepDurationSeconds);
                     }
 
                     if (context.UpdatedCellCount > 0)
                     {
-                        steps.Add(new BoardPresentationStep(
+                        AddStep(
+                            steps,
+                            ref nextSequenceIndex,
                             BoardPresentationStepType.ResolveChanges,
                             "Resolve changed cells",
-                            BoardPresentationStepReason.ChangedCells));
+                            BoardPresentationStepReason.ChangedCells,
+                            BoardPresentationStepCompletionMode.Immediate,
+                            ResolveStepDurationSeconds);
                     }
                     break;
                 default:
                     if (HasTransition(context.TransitionCounts, BoardCellView.RefreshTransitionType.SelectionPulse))
                     {
-                        steps.Add(new BoardPresentationStep(
+                        AddStep(
+                            steps,
+                            ref nextSequenceIndex,
                             BoardPresentationStepType.InteractionRefresh,
                             "Apply selection feedback",
-                            BoardPresentationStepReason.InteractionSelection));
+                            BoardPresentationStepReason.InteractionSelection,
+                            BoardPresentationStepCompletionMode.Immediate,
+                            ShortStepDurationSeconds);
                     }
 
                     if (context.UpdatedCellCount > 0)
                     {
-                        steps.Add(new BoardPresentationStep(
+                        AddStep(
+                            steps,
+                            ref nextSequenceIndex,
                             BoardPresentationStepType.ResolveChanges,
                             "Apply board changes",
-                            BoardPresentationStepReason.ChangedCells));
+                            BoardPresentationStepReason.ChangedCells,
+                            BoardPresentationStepCompletionMode.Immediate,
+                            ResolveStepDurationSeconds);
                     }
                     break;
             }
 
-            steps.Add(new BoardPresentationStep(
+            AddStep(
+                steps,
+                ref nextSequenceIndex,
                 BoardPresentationStepType.Complete,
                 context.AnimatedCellCount > 0 ? "Await animated settle" : "Complete immediately",
                 BoardPresentationStepReason.PassCompletion,
                 context.AnimatedCellCount > 0
                     ? BoardPresentationStepCompletionMode.AwaitAnimatedSettle
-                    : BoardPresentationStepCompletionMode.Immediate));
+                    : BoardPresentationStepCompletionMode.Immediate,
+                context.AnimatedCellCount > 0 ? AwaitSettleDurationSeconds : 0f);
 
-            return new BoardPresentationPassPlan(context.Stage, steps);
+            return new BoardPresentationPassPlan(
+                context.Stage,
+                steps,
+                EstimateDurationSeconds(steps));
+        }
+
+        private static void AddStep(
+            ICollection<BoardPresentationStep> steps,
+            ref int nextSequenceIndex,
+            BoardPresentationStepType type,
+            string label,
+            BoardPresentationStepReason reason,
+            BoardPresentationStepCompletionMode completionMode = BoardPresentationStepCompletionMode.Immediate,
+            float expectedDurationSeconds = 0f)
+        {
+            steps.Add(new BoardPresentationStep(nextSequenceIndex, type, label, reason, completionMode, expectedDurationSeconds));
+            nextSequenceIndex++;
+        }
+
+        private static float EstimateDurationSeconds(IReadOnlyCollection<BoardPresentationStep> steps)
+        {
+            var total = 0f;
+            foreach (var step in steps)
+            {
+                total += step.ExpectedDurationSeconds;
+            }
+
+            return total;
         }
 
         private static bool HasPhase(

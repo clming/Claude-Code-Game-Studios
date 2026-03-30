@@ -65,8 +65,9 @@ namespace MatchJoy.Core
             _boardState = BoardBuilder.Build(_levelDefinition);
             _moveCounter = new MoveCounter(_levelDefinition.MoveLimit);
             _goalTracker = new GoalTracker(_levelDefinition.Goals);
+            RefreshBoardSessionContext();
             _boardView?.Render(_boardState, BoardPresentationRenderRequest.Immediate(null, "Initial Session Build", BoardPresentationIntent.InitialBuild));
-            _hudPresenter?.ShowMoves(_moveCounter.RemainingMoves);
+            _hudPresenter?.ShowLevelStatus(_levelDefinition, _moveCounter.RemainingMoves, _goalTracker.CreateSnapshot());
             _resultsPresenter?.Hide();
             _gameFlowController.EnterLevelActive();
         }
@@ -90,6 +91,7 @@ namespace MatchJoy.Core
             if (!result.Accepted)
             {
                 Debug.Log($"Rejected swap {source} -> {target}", this);
+                RefreshBoardSessionContext();
                 _boardView?.Render(_boardState, BoardPresentationRenderRequest.Immediate(null, $"Rejected Swap Refresh {source} -> {target}", BoardPresentationIntent.RejectedSwapRefresh));
                 return false;
             }
@@ -105,6 +107,7 @@ namespace MatchJoy.Core
                 Debug.Log($"Board presentation settlement started for accepted swap {source} -> {target}.", this);
             }
 
+            RefreshBoardSessionContext();
             _boardView?.Render(
                 _boardState,
                 BoardPresentationRenderRequest.ResolvedSwap(source, target, $"Accepted Swap Resolve {source} -> {target}", BoardPresentationIntent.AcceptedSwapResolve));
@@ -126,17 +129,18 @@ namespace MatchJoy.Core
                 Debug.Log("Board presentation settlement completed. Applying HUD and result updates.", this);
             }
 
-            _hudPresenter?.ShowMoves(_moveCounter.RemainingMoves);
+            _hudPresenter?.ShowLevelStatus(_levelDefinition, _moveCounter.RemainingMoves, _goalTracker.CreateSnapshot());
+            RefreshBoardSessionContext();
 
             if (_goalTracker.AreAllGoalsComplete())
             {
                 _gameFlowController.ShowResults();
-                _resultsPresenter?.ShowVictory(_moveCounter.RemainingMoves);
+                _resultsPresenter?.ShowVictory(_moveCounter.RemainingMoves, _levelDefinition);
             }
             else if (_moveCounter.RemainingMoves <= 0)
             {
                 _gameFlowController.ShowResults();
-                _resultsPresenter?.ShowFailure();
+                _resultsPresenter?.ShowFailure(_levelDefinition);
             }
             else
             {
@@ -165,6 +169,7 @@ namespace MatchJoy.Core
                 }
 
                 _boardInputController.TrySelect(coordinate);
+                RefreshBoardSessionContext();
                 _boardView?.Render(
                     _boardState,
                     BoardPresentationRenderRequest.Immediate(
@@ -176,6 +181,7 @@ namespace MatchJoy.Core
 
             if (_boardInputController.TrySelect(coordinate))
             {
+                RefreshBoardSessionContext();
                 _boardView?.Render(
                     _boardState,
                     BoardPresentationRenderRequest.Immediate(
@@ -198,6 +204,11 @@ namespace MatchJoy.Core
             }
 
             TryHandleSwap(source, target);
+        }
+
+        private void RefreshBoardSessionContext()
+        {
+            _boardView?.ShowSessionContext(_levelDefinition, _moveCounter?.RemainingMoves ?? 0, _goalTracker.CreateSnapshot());
         }
     }
 }

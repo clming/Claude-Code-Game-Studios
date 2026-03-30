@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Text;
+using MatchJoy.Authoring;
 using MatchJoy.Board;
+using MatchJoy.Goals;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace MatchJoy.UI
 {
@@ -44,6 +47,14 @@ namespace MatchJoy.UI
 
         [SerializeField] private RectTransform _cellRoot;
         [SerializeField] private BoardCellView _cellTemplate;
+        [SerializeField] private Image _boardPanelBackground;
+        [SerializeField] private Image _boardAccent;
+        [SerializeField] private Text _boardOverlineLabel;
+        [SerializeField] private Text _boardStagePillLabel;
+        [SerializeField] private Text _boardTitleLabel;
+        [SerializeField] private Text _boardSubtitleLabel;
+        [SerializeField] private Text _boardStatusBadgeLabel;
+        [SerializeField] private Text _boardFootnoteLabel;
         [SerializeField] private Vector2 _cellSize = new(72f, 72f);
         [SerializeField] private Vector2 _cellSpacing = new(6f, 6f);
         [SerializeField] private bool _logDiffRefreshes;
@@ -60,6 +71,9 @@ namespace MatchJoy.UI
         private readonly Dictionary<(int X, int Y), BoardCellView> _spawnedCells = new();
         private readonly Dictionary<(int X, int Y), CellRenderSnapshot> _lastRenderedStates = new();
         private readonly BoardPresentationPassContext _presentationPassContext = new();
+        private LevelDefinition _levelDefinition;
+        private GoalProgressSnapshot _goalSnapshot;
+        private int _remainingMoves;
 
         public event Action<BoardCoordinate> CellClicked;
         public event Action<BoardCoordinate, BoardCoordinate> SwipeRequested;
@@ -67,6 +81,13 @@ namespace MatchJoy.UI
 
         public BoardPresentationPassSummary LastPresentationPassSummary => _presentationPassContext.LastSummary;
         public IReadOnlyList<BoardPresentationPassSummary> PresentationHistory => _presentationPassContext.History;
+
+        public void ShowSessionContext(LevelDefinition levelDefinition, int remainingMoves, GoalProgressSnapshot goalSnapshot)
+        {
+            _levelDefinition = levelDefinition;
+            _remainingMoves = remainingMoves;
+            _goalSnapshot = goalSnapshot;
+        }
 
         public string BuildPresentationDebugSummary()
         {
@@ -173,6 +194,7 @@ namespace MatchJoy.UI
                 return;
             }
 
+            ApplyBoardChrome(board, request);
             EnsureGrid(board);
             var plan = CreatePresentationPlan();
             var passPlanner = CreatePresentationPassPlanner();
@@ -278,7 +300,7 @@ namespace MatchJoy.UI
             if (_logPresentationLifecycle)
             {
                 Debug.Log(
-                    $"BoardView presentation pass {currentPresentationToken} started. Intent={request.PresentationIntent}, Stage={passPlan.Stage}, Steps={BuildStepSummary(passPlan.Steps)}, Label={resolvedLabel}, Mode={request.PresentationMode}, UpdatedCells={updatedCellCount}, AnimatedCells={_presentationPassContext.PendingAnimatedCellCount}, Transitions={BuildTransitionSummary(transitionCounts)}, Phases={BuildPhaseSummary(phaseCounts)}.",
+                    $"BoardView presentation pass {currentPresentationToken} started. Intent={request.PresentationIntent}, Stage={passPlan.Stage}, Steps={BuildStepSummary(passPlan.Steps)}, Estimated={passPlan.EstimatedDurationSeconds:F3}s, Label={resolvedLabel}, Mode={request.PresentationMode}, UpdatedCells={updatedCellCount}, AnimatedCells={_presentationPassContext.PendingAnimatedCellCount}, Transitions={BuildTransitionSummary(transitionCounts)}, Phases={BuildPhaseSummary(phaseCounts)}.",
                     this);
             }
 
@@ -289,6 +311,7 @@ namespace MatchJoy.UI
                 request.PresentationIntent,
                 passPlan.Stage,
                 passPlan.Steps,
+                passPlan.EstimatedDurationSeconds,
                 updatedCellCount,
                 _presentationPassContext.PendingAnimatedCellCount,
                 _presentationPassContext.PendingAnimatedCellCount == 0,
@@ -332,6 +355,85 @@ namespace MatchJoy.UI
                 _swapPreviewDuration,
                 _swapPreviewOffsetCells,
                 _clearPreviewDuration);
+        }
+
+        private void ApplyBoardChrome(BoardState board, BoardPresentationRenderRequest request)
+        {
+            var width = (board.Width * _cellSize.x) + (Mathf.Max(0, board.Width - 1) * _cellSpacing.x);
+            var height = (board.Height * _cellSize.y) + (Mathf.Max(0, board.Height - 1) * _cellSpacing.y);
+            _cellRoot.sizeDelta = new Vector2(width, height);
+
+            if (_boardPanelBackground != null)
+            {
+                _boardPanelBackground.color = ResolveBoardPanelColor(request);
+            }
+
+            if (_boardAccent != null)
+            {
+                _boardAccent.color = ResolveBoardAccentColor(request);
+            }
+
+            if (_boardOverlineLabel != null)
+            {
+                _boardOverlineLabel.supportRichText = true;
+                _boardOverlineLabel.alignment = TextAnchor.MiddleLeft;
+                _boardOverlineLabel.fontStyle = FontStyle.Bold;
+                _boardOverlineLabel.color = new Color32(172, 126, 96, 255);
+                _boardOverlineLabel.text = _levelDefinition != null
+                    ? $"<size=11><b>CHAPTER {_levelDefinition.ChapterIndex} / LEVEL {_levelDefinition.LevelOrder:00}</b></size>"
+                    : "<size=11><b>WORKSHOP PROTOTYPE</b></size>";
+            }
+
+            if (_boardTitleLabel != null)
+            {
+                _boardTitleLabel.supportRichText = true;
+                _boardTitleLabel.alignment = TextAnchor.MiddleLeft;
+                _boardTitleLabel.fontStyle = FontStyle.Bold;
+                _boardTitleLabel.color = new Color32(116, 80, 62, 255);
+                _boardTitleLabel.text = request.PresentationIntent switch
+                {
+                    BoardPresentationIntent.InitialBuild => "<b>Candy Workbench</b>",
+                    BoardPresentationIntent.SelectionRefresh => "<b>Pick Your Pair</b>",
+                    BoardPresentationIntent.RejectedSwapRefresh => "<b>Tray Locked</b>",
+                    BoardPresentationIntent.AcceptedSwapResolve => "<b>Batch Resolving</b>",
+                    _ => "<b>Board In Motion</b>"
+                };
+            }
+
+            if (_boardStagePillLabel != null)
+            {
+                _boardStagePillLabel.supportRichText = true;
+                _boardStagePillLabel.alignment = TextAnchor.MiddleCenter;
+                _boardStagePillLabel.fontStyle = FontStyle.Bold;
+                _boardStagePillLabel.color = ResolveBoardAccentColor(request);
+                _boardStagePillLabel.text = $"<b>{BuildBoardStagePillText(request)}</b>";
+            }
+
+            if (_boardSubtitleLabel != null)
+            {
+                _boardSubtitleLabel.supportRichText = true;
+                _boardSubtitleLabel.alignment = TextAnchor.MiddleLeft;
+                _boardSubtitleLabel.color = new Color32(145, 114, 98, 255);
+                _boardSubtitleLabel.text =
+                    $"{board.Width} x {board.Height} grid  /  {CountPlayableCells(board)} playable slots" +
+                    $"\n{ResolveBoardStatusLine(request)}";
+            }
+
+            if (_boardStatusBadgeLabel != null)
+            {
+                _boardStatusBadgeLabel.supportRichText = true;
+                _boardStatusBadgeLabel.alignment = TextAnchor.MiddleRight;
+                _boardStatusBadgeLabel.color = new Color32(167, 123, 101, 255);
+                _boardStatusBadgeLabel.text = BuildBoardStatusBadge();
+            }
+
+            if (_boardFootnoteLabel != null)
+            {
+                _boardFootnoteLabel.supportRichText = true;
+                _boardFootnoteLabel.alignment = TextAnchor.MiddleLeft;
+                _boardFootnoteLabel.color = new Color32(165, 126, 107, 255);
+                _boardFootnoteLabel.text = BuildBoardFootnote();
+            }
         }
 
         private static BoardPresentationPassPlanner CreatePresentationPassPlanner()
@@ -415,6 +517,7 @@ namespace MatchJoy.UI
                 _presentationPassContext.LastSummary.Intent,
                 _presentationPassContext.LastSummary.Stage,
                 _presentationPassContext.LastSummary.Steps,
+                _presentationPassContext.LastSummary.EstimatedDurationSeconds,
                 _presentationPassContext.LastSummary.UpdatedCellCount,
                 _presentationPassContext.LastSummary.AnimatedCellCount,
                 true,
@@ -529,6 +632,143 @@ namespace MatchJoy.UI
             return request.PresentationMode == PresentationMode.Immediate
                 ? "Immediate Refresh"
                 : "Resolved Sequence";
+        }
+
+        private static int CountPlayableCells(BoardState board)
+        {
+            var count = 0;
+            foreach (var cell in board.GetAllCells())
+            {
+                if (cell.IsPlayable)
+                {
+                    count++;
+                }
+            }
+
+            return count;
+        }
+
+        private static string ResolveBoardStatusLine(BoardPresentationRenderRequest request)
+        {
+            return request.PresentationIntent switch
+            {
+                BoardPresentationIntent.InitialBuild => "Fresh batch loaded. Start by opening the center lanes.",
+                BoardPresentationIntent.SelectionRefresh => "Read the tray before you commit the next swap.",
+                BoardPresentationIntent.RejectedSwapRefresh => "No match formed. Try building a stronger shape.",
+                BoardPresentationIntent.AcceptedSwapResolve => "Hold the line while candies settle into place.",
+                _ => "Keep the board tidy and chase efficient clears."
+            };
+        }
+
+        private string BuildBoardStatusBadge()
+        {
+            var stars = EvaluateStarBand(_remainingMoves, _levelDefinition?.MoveBasedStarThresholds);
+            var pressure = BuildPressureLabel();
+            var goalsText = _goalSnapshot.TotalGoals > 0
+                ? $"{_goalSnapshot.CompletedGoals}/{_goalSnapshot.TotalGoals} goals"
+                : "No goals";
+            return $"<size=11><b>{BuildStarBandText(stars)}</b>  /  {pressure}  /  {goalsText}</size>";
+        }
+
+        private string BuildBoardFootnote()
+        {
+            var goalsText = _goalSnapshot.TotalGoals > 0
+                ? $"{_goalSnapshot.CompletedGoals}/{_goalSnapshot.TotalGoals} goals closed"
+                : "No active goals";
+            var movesText = _levelDefinition != null
+                ? $"{_remainingMoves}/{_levelDefinition.MoveLimit} moves in reserve"
+                : $"{_remainingMoves} moves in reserve";
+
+            return $"<size=11>{movesText}  /  {goalsText}</size>";
+        }
+
+        private static string BuildBoardStagePillText(BoardPresentationRenderRequest request)
+        {
+            return request.PresentationIntent switch
+            {
+                BoardPresentationIntent.InitialBuild => "BOARD READY",
+                BoardPresentationIntent.SelectionRefresh => "PAIR SCOUT",
+                BoardPresentationIntent.RejectedSwapRefresh => "NO MATCH",
+                BoardPresentationIntent.AcceptedSwapResolve => "SETTLING",
+                _ => "LIVE BOARD"
+            };
+        }
+
+        private Color32 ResolveBoardPanelColor(BoardPresentationRenderRequest request)
+        {
+            var isPressureWindow = _remainingMoves <= 5;
+            var isMidPressureWindow = _remainingMoves <= 10;
+
+            return request.PresentationStage switch
+            {
+                BoardPresentationStage.InitialBuild when isPressureWindow => new Color32(255, 234, 229, 244),
+                BoardPresentationStage.InitialBuild => new Color32(253, 242, 229, 242),
+                BoardPresentationStage.SwapResolution when isPressureWindow => new Color32(255, 228, 220, 248),
+                BoardPresentationStage.SwapResolution => new Color32(255, 236, 222, 246),
+                BoardPresentationStage.InteractionRefresh when isPressureWindow => new Color32(255, 236, 232, 240),
+                BoardPresentationStage.InteractionRefresh when isMidPressureWindow => new Color32(252, 239, 231, 239),
+                BoardPresentationStage.InteractionRefresh => new Color32(251, 244, 236, 238),
+                _ => new Color32(248, 241, 233, 234)
+            };
+        }
+
+        private Color32 ResolveBoardAccentColor(BoardPresentationRenderRequest request)
+        {
+            var isPressureWindow = _remainingMoves <= 5;
+            var isMidPressureWindow = _remainingMoves <= 10;
+
+            return request.PresentationStage switch
+            {
+                BoardPresentationStage.InitialBuild when isPressureWindow => new Color32(207, 98, 82, 255),
+                BoardPresentationStage.InitialBuild => new Color32(194, 126, 72, 255),
+                BoardPresentationStage.SwapResolution when isPressureWindow => new Color32(214, 88, 64, 255),
+                BoardPresentationStage.SwapResolution => new Color32(204, 94, 64, 255),
+                BoardPresentationStage.InteractionRefresh when isPressureWindow => new Color32(205, 101, 86, 255),
+                BoardPresentationStage.InteractionRefresh when isMidPressureWindow => new Color32(196, 122, 82, 255),
+                BoardPresentationStage.InteractionRefresh => new Color32(178, 132, 82, 255),
+                _ => new Color32(170, 132, 104, 255)
+            };
+        }
+
+        private static int EvaluateStarBand(int remainingMoves, int[] thresholds)
+        {
+            if (thresholds == null || thresholds.Length == 0)
+            {
+                return remainingMoves > 0 ? 2 : 1;
+            }
+
+            var stars = 1;
+            if (thresholds.Length > 1 && remainingMoves >= thresholds[1])
+            {
+                stars = 2;
+            }
+
+            if (thresholds.Length > 2 && remainingMoves >= thresholds[2])
+            {
+                stars = 3;
+            }
+
+            return Mathf.Clamp(stars, 1, 3);
+        }
+
+        private static string BuildStarBandText(int stars)
+        {
+            return stars switch
+            {
+                3 => "*** pace",
+                2 => "**- pace",
+                _ => "*-- pace"
+            };
+        }
+
+        private string BuildPressureLabel()
+        {
+            return _remainingMoves switch
+            {
+                <= 5 => "final window",
+                <= 10 => "tight line",
+                _ => "stable setup"
+            };
         }
 
         private void HandleCellClicked(BoardCoordinate coordinate)

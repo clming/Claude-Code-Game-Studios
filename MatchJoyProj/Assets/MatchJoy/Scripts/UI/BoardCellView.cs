@@ -67,6 +67,9 @@ namespace MatchJoy.UI
         [SerializeField] private float _refillFadeDuration = 0.12f;
         [SerializeField] private float _refillDropDuration = 0.16f;
         [SerializeField] private float _clearFadeScale = 0.82f;
+        [SerializeField] private Color _slotTint = new(0.93f, 0.80f, 0.72f, 0.34f);
+        [SerializeField] private Color _blockedTint = new(0.35f, 0.26f, 0.25f, 0.86f);
+        [SerializeField] private Color _selectedFillTint = new(1f, 0.79f, 0.46f, 1f);
 
         private bool _isPlayable;
         private BoardCoordinate _coordinate;
@@ -308,20 +311,84 @@ namespace MatchJoy.UI
         {
             if (_background != null)
             {
-                _background.color = isSelected
-                    ? new Color(1f, 0.92f, 0.35f, 1f)
-                    : !isPlayable
-                        ? new Color(0.15f, 0.15f, 0.15f, 0.75f)
-                        : isOccupied
-                            ? Color.white
-                            : new Color(1f, 1f, 1f, 0.2f);
+                _background.color = ResolveBackgroundColor(isPlayable, isOccupied, tileId, isSelected);
             }
 
             if (_tileLabel != null)
             {
-                _tileLabel.text = isOccupied ? tileId.ToString() : string.Empty;
-                _tileLabel.color = isPlayable ? Color.black : Color.clear;
+                _tileLabel.supportRichText = true;
+                _tileLabel.alignment = TextAnchor.MiddleCenter;
+                _tileLabel.fontStyle = FontStyle.Bold;
+                _tileLabel.text = isOccupied ? BuildTileGlyph(tileId) : string.Empty;
+                _tileLabel.color = ResolveLabelColor(isPlayable, isOccupied, tileId, isSelected);
             }
+        }
+
+        private Color ResolveBackgroundColor(bool isPlayable, bool isOccupied, int tileId, bool isSelected)
+        {
+            if (!isPlayable)
+            {
+                return _blockedTint;
+            }
+
+            if (!isOccupied)
+            {
+                return _slotTint;
+            }
+
+            var baseColor = ResolveTileColor(tileId);
+            return isSelected
+                ? Color.Lerp(baseColor, _selectedFillTint, 0.45f)
+                : baseColor;
+        }
+
+        private Color ResolveLabelColor(bool isPlayable, bool isOccupied, int tileId, bool isSelected)
+        {
+            if (!isPlayable || !isOccupied)
+            {
+                return Color.clear;
+            }
+
+            var tileColor = ResolveTileColor(tileId);
+            var luminance = (tileColor.r * 0.299f) + (tileColor.g * 0.587f) + (tileColor.b * 0.114f);
+            if (isSelected)
+            {
+                return new Color(0.34f, 0.19f, 0.13f, 1f);
+            }
+
+            return luminance > 0.62f
+                ? new Color(0.29f, 0.20f, 0.17f, 1f)
+                : new Color(1f, 0.98f, 0.95f, 1f);
+        }
+
+        private static string BuildTileGlyph(int tileId)
+        {
+            return tileId switch
+            {
+                0 => "A",
+                1 => "B",
+                2 => "C",
+                3 => "D",
+                4 => "E",
+                5 => "F",
+                6 => "G",
+                _ => tileId.ToString()
+            };
+        }
+
+        private static Color ResolveTileColor(int tileId)
+        {
+            return tileId switch
+            {
+                0 => new Color(1.00f, 0.56f, 0.49f, 1f),
+                1 => new Color(1.00f, 0.77f, 0.39f, 1f),
+                2 => new Color(0.99f, 0.90f, 0.45f, 1f),
+                3 => new Color(0.59f, 0.84f, 0.51f, 1f),
+                4 => new Color(0.47f, 0.77f, 0.98f, 1f),
+                5 => new Color(0.67f, 0.62f, 0.95f, 1f),
+                6 => new Color(0.99f, 0.56f, 0.76f, 1f),
+                _ => new Color(0.95f, 0.88f, 0.80f, 1f)
+            };
         }
 
         private IEnumerator PlayScalePulse(float peakScale, float duration)

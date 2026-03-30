@@ -1,7 +1,7 @@
 ﻿# MatchJoy Scene Wiring Guide
 
 > **Status**: Draft
-> **Last Updated**: 2026-03-29
+> **Last Updated**: 2026-03-30
 > **Purpose**: Help wire the current Sprint 1 prototype scripts into a working Unity scene step by step.
 
 ---
@@ -15,6 +15,8 @@ At the end of this setup, you should have one Unity scene that can:
 - render a visible grid with `BoardView`
 - show remaining moves in `HudPresenter`
 - show a simple result panel through `ResultsPresenter`
+- present the runtime board as a readable product slice, with HUD context, board chrome, and a clearer result state
+- let board chrome react not only to presentation stage but also to remaining-move pressure, so the center module better matches HUD urgency
 - let you click a first cell, click an adjacent second cell, and attempt a real swap
 - let you drag or swipe from one cell toward a neighbor to attempt a direct swap
 - refresh only the cells whose visible state changed after interaction
@@ -137,8 +139,26 @@ Add component:
 Create child UI Text:
 - Name: `MovesLabel`
 
+Optional additional UI children:
+- `AccentBar` (`Image`)
+- `OverlineLabel` (`Text`)
+- `PanelBackground` (`Image`)
+- `TitleLabel` (`Text`)
+- `GoalLabel` (`Text`)
+- `PaceLabel` (`Text`)
+- `StateLabel` (`Text`)
+- `FooterLabel` (`Text`)
+
 Assign in `HudPresenter`:
+- `Accent Bar` -> drag `AccentBar` if used
+- `Overline Label` -> drag `OverlineLabel` if used
+- `Panel Background` -> drag `PanelBackground` if used
+- `Title Label` -> drag `TitleLabel` if used
+- `Goal Label` -> drag `GoalLabel` if used
 - `Moves Label` -> drag `MovesLabel`
+- `Pace Label` -> drag `PaceLabel` if used
+- `State Label` -> drag `StateLabel` if used
+- `Footer Label` -> drag `FooterLabel` if used
 
 ### ResultsPanel Object
 
@@ -152,10 +172,24 @@ Create children:
 - `HeadlineLabel`
 - `DetailsLabel`
 
+Optional additional children:
+- `AccentBar` (`Image`)
+- `OverlineLabel` (`Text`)
+- `PanelBackground` (`Image`)
+- `BadgeLabel` (`Text`)
+- `SummaryLabel` (`Text`)
+- `FooterLabel` (`Text`)
+
 Assign in `ResultsPresenter`:
 - `Root` -> drag `ResultsPanel`
+- `Accent Bar` -> drag `AccentBar` if used
+- `Overline Label` -> drag `OverlineLabel` if used
+- `Panel Background` -> drag `PanelBackground` if used
+- `Badge Label` -> drag `BadgeLabel` if used
 - `Headline Label` -> drag `HeadlineLabel`
+- `Summary Label` -> drag `SummaryLabel` if used
 - `Details Label` -> drag `DetailsLabel`
+- `Footer Label` -> drag `FooterLabel` if used
 
 Suggested initial state:
 - disable `ResultsPanel` in hierarchy so it starts hidden
@@ -214,6 +248,9 @@ Optional debug recommendation:
 - it now also carries presentation mode and intent, so pass planning can react to request semantics directly instead of inferring everything from counts alone
 - each board step now also carries a lightweight reason code, so pass history is starting to capture why a step exists, not just its coarse type
 - board steps now also carry a lightweight completion mode (`Immediate` vs `AwaitAnimatedSettle`), which starts to model whether a future sequencer would advance instantly or wait for settle
+- board steps now also carry an explicit sequence index, so pass history no longer relies only on list position to describe execution order
+- board steps now also carry a lightweight expected-duration hint, so the pass model is beginning to express cadence as well as order
+- the pass plan now also aggregates those step hints into an estimated total duration, so summary/history can compare planned cadence against actual settle time
 - each presentation pass now also builds a lightweight board-step plan (`Prepare -> ... -> Complete`) so pass history can describe board-level sequencing before a full sequencer exists
 - flow can now represent this bridge window explicitly as `Level Presentation Settling`
 
@@ -249,6 +286,14 @@ Assign in `BoardCellView`:
 - `Tile Label` -> drag `TileLabel`
 
 Assign in `BoardView`:
+- `Board Panel Background` -> drag a surrounding `Image` if used
+- `Board Accent` -> drag a thin accent `Image` if used
+- `Board Overline Label` -> drag a top metadata `Text` if used
+- `Board Stage Pill Label` -> drag a compact status `Text` if used
+- `Board Title Label` -> drag a title `Text` if used
+- `Board Subtitle Label` -> drag a subtitle `Text` if used
+- `Board Status Badge Label` -> drag a right-side status `Text` if used
+- `Board Footnote Label` -> drag a lower status `Text` if used
 - `Cell Root` -> drag `CellRoot`
 - `Cell Template` -> drag `CellTemplate`
 
